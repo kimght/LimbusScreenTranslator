@@ -64,7 +64,9 @@ class LocalizationRepository @Inject constructor(
     suspend fun fetchCatalog(manifestUrl: String): Catalog {
         val manifest = api.getManifest(manifestUrl)
         return Catalog(
-            localizations = manifest.localizations.map { it.toDomain() },
+            localizations = manifest.localizations
+                .filter { it.id.isNotBlank() }
+                .map { it.toDomain() },
             chaptersUrl = manifest.chaptersUrl,
         )
     }

@@ -48,6 +48,27 @@ class SourceRepositoryTest {
     }
 
     @Test
+    fun `seedDefaultsIfEmpty populates the built-ins and is idempotent`() = runTest {
+        repo.seedDefaultsIfEmpty()
+        assertEquals(
+            SourceRepository.DEFAULT_SOURCES.map { it.name }.toSet(),
+            repo.sources.first().map { it.name }.toSet(),
+        )
+
+        repo.seedDefaultsIfEmpty()
+        assertEquals(SourceRepository.DEFAULT_SOURCES.size, repo.sources.first().size)
+    }
+
+    @Test
+    fun `seedDefaultsIfEmpty leaves an existing non-empty table untouched`() = runTest {
+        repo.addSource("Custom", "https://custom.dev/localizations.json")
+
+        repo.seedDefaultsIfEmpty()
+
+        assertEquals(listOf("Custom"), repo.sources.first().map { it.name })
+    }
+
+    @Test
     fun `restoreDefaults replaces custom sources with the built-ins`() = runTest {
         repo.seedDefaultsIfEmpty()
         repo.addSource("Custom", "https://custom.dev/localizations/localizations.json")

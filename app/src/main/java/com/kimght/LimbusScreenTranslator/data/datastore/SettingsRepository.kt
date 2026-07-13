@@ -3,11 +3,14 @@ package com.kimght.LimbusScreenTranslator.data.datastore
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,7 +32,11 @@ class SettingsRepository @Inject constructor(
         val BROWSING_SOURCE = stringPreferencesKey("selected_browsing_source")
     }
 
-    val settings: Flow<Settings> = dataStore.data.map { prefs ->
+    val settings: Flow<Settings> = dataStore.data.catch { e ->
+        // A power-off mid-write can leave preferences_pb unparseable. Fall back to
+        // defaults so every collector keeps working instead of crashing on launch.
+        if (e is IOException) emit(emptyPreferences()) else throw e
+    }.map { prefs ->
         Settings(
             opacity = prefs[Keys.OPACITY] ?: Settings.DEFAULT_OPACITY,
             textSize = prefs[Keys.TEXT_SIZE] ?: Settings.DEFAULT_TEXT_SIZE,

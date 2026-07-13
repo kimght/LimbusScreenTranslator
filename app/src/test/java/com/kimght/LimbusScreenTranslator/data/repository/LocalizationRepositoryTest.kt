@@ -171,6 +171,19 @@ class LocalizationRepositoryTest {
         assertEquals(listOf("ru-mtl"), catalog.localizations.map { it.id })
     }
 
+    @Test
+    fun `fetchCatalog drops manifest entries with a blank id`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """{"localizations":[{"id":"","version":"v1"},{"id":"ru-mtl","version":"v1"}]}""",
+            ),
+        )
+
+        val catalog = repo.fetchCatalog(server.url("/localizations.json").toString())
+
+        assertEquals(listOf("ru-mtl"), catalog.localizations.map { it.id })
+    }
+
     private val githubKey = PackKey.of("Github", "ru-mtl")
 
     @Test

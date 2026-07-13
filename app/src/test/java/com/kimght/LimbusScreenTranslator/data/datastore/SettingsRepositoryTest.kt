@@ -42,6 +42,22 @@ class SettingsRepositoryTest {
     }
 
     @Test
+    fun `a corrupt preferences file yields defaults instead of crashing`() = runTest {
+        val corruptDir = Files.createTempDirectory("corrupt").toFile()
+        val file = File(corruptDir, "settings.preferences_pb")
+        file.writeBytes(byteArrayOf(0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8))
+        val corruptRepo = SettingsRepository(
+            PreferenceDataStoreFactory.create(produceFile = { file }),
+        )
+
+        val s = corruptRepo.settings.first()
+
+        assertEquals(Settings.DEFAULT_OPACITY, s.opacity)
+        assertNull(s.activeLocalizationId)
+        corruptDir.deleteRecursively()
+    }
+
+    @Test
     fun `opacity is clamped to its allowed range`() = runTest {
         repo.setOpacity(5f)
         assertEquals(Settings.MAX_OPACITY, repo.settings.first().opacity)
