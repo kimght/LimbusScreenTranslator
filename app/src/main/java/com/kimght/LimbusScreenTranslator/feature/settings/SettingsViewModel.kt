@@ -74,16 +74,14 @@ class SettingsViewModel @Inject constructor(
 
     fun removeSource(name: String) {
         viewModelScope.launch {
-            localizations.uninstallBySource(name)
-            sourceRepository.removeSource(name)
+            localizations.removeSourceWithPacks(name)
             _messages.tryEmit("Source removed · $name")
         }
     }
 
     fun resetEverything() {
         viewModelScope.launch {
-            localizations.uninstallAll()
-            sourceRepository.restoreDefaults()
+            localizations.restoreDefaultSources()
             settings.resetToDefaults()
             _messages.tryEmit("Everything reset to defaults")
         }

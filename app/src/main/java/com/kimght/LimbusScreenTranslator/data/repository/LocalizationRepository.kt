@@ -42,6 +42,7 @@ class LocalizationRepository @Inject constructor(
     private val settings: SettingsRepository,
     private val contentWriter: PackContentWriter,
     private val scenarios: ScenarioRepository,
+    private val sources: SourceRepository,
 ) {
     val installedPacks: Flow<List<InstalledPack>> =
         installedPackDao.observeAll().map { list ->
@@ -127,10 +128,12 @@ class LocalizationRepository @Inject constructor(
 
     suspend fun uninstall(key: String) {
         installManager.cancel(key)
-        contentWriter.deletePack(key)
+        // Clear the active reference before deleting so process death mid-uninstall
+        // can never leave the active id pointing at an already-deleted pack.
         if (settings.settings.first().activeLocalizationId == key) {
             settings.setActiveLocalizationId(null)
         }
+        contentWriter.deletePack(key)
     }
 
     suspend fun uninstallBySource(sourceName: String) {
@@ -148,6 +151,20 @@ class LocalizationRepository @Inject constructor(
         }
         scenarios.clearAllChapters()
         settings.setActiveLocalizationId(null)
+    }
+
+    /**
+     * Removing a source uninstalls everything installed from it. Owning both writes in one
+     * operation keeps the cascade from depending on call-site ordering.
+     */
+    suspend fun removeSourceWithPacks(sourceName: String) {
+        uninstallBySource(sourceName)
+        sources.removeSource(sourceName)
+    }
+
+    suspend fun restoreDefaultSources() {
+        uninstallAll()
+        sources.restoreDefaults()
     }
 
     private companion object {

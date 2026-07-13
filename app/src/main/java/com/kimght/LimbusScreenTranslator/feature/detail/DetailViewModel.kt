@@ -98,8 +98,11 @@ class DetailViewModel @Inject constructor(
         viewModelScope.launch { localizationRepository.setActive(packKey) }
     }
 
-    fun uninstall() {
-        viewModelScope.launch { localizationRepository.uninstall(packKey) }
+    fun uninstall(onComplete: () -> Unit) {
+        viewModelScope.launch {
+            localizationRepository.uninstall(packKey)
+            onComplete()
+        }
     }
 }
 

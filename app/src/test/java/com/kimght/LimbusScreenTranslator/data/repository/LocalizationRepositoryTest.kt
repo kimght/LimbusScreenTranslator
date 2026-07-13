@@ -53,6 +53,7 @@ class LocalizationRepositoryTest {
     private lateinit var settingsDir: File
     private lateinit var settings: SettingsRepository
     private lateinit var scenarios: ScenarioRepository
+    private lateinit var sources: SourceRepository
     private lateinit var repo: LocalizationRepository
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
 
@@ -100,6 +101,7 @@ class LocalizationRepositoryTest {
         )
         settings = SettingsRepository(dataStore)
         scenarios = ScenarioRepository(db, db.scenarioDao(), db.chapterDao(), api)
+        sources = SourceRepository(db.sourceDao(), settings)
         repo = LocalizationRepository(
             api = api,
             installedPackDao = db.installedPackDao(),
@@ -107,6 +109,7 @@ class LocalizationRepositoryTest {
             settings = settings,
             contentWriter = writer,
             scenarios = scenarios,
+            sources = sources,
         )
     }
 
@@ -290,6 +293,27 @@ class LocalizationRepositoryTest {
 
         assertTrue(installing.await().exceptionOrNull() is CancellationException)
         assertTrue(repo.installedPacks.first().isEmpty())
+    }
+
+    @Test
+    fun `removeSourceWithPacks uninstalls the source's packs and drops the source`() = runTest {
+        sources.addSource("Github", "https://example.com/localizations.json")
+        server.enqueue(
+            MockResponse().setBody(
+                """{"chapters":[{"name":"Canto I","subtitle":"s","episodes":["S001B"]}]}""",
+            ),
+        )
+        repo.install(localization(), "Github", server.url("/chapters.json").toString())
+        repo.install(localization(), "Mirror", chaptersUrl = null)
+        repo.setActive(githubKey)
+
+        repo.removeSourceWithPacks("Github")
+
+        val packs = repo.installedPacks.first()
+        assertEquals(listOf("Mirror"), packs.map { it.sourceName })
+        assertTrue(scenarios.chapters("Github").isEmpty())
+        assertNull(settings.settings.first().activeLocalizationId)
+        assertTrue(sources.sources.first().none { it.name == "Github" })
     }
 
     @Test

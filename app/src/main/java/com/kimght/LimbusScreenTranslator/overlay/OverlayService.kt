@@ -231,14 +231,13 @@ class OverlayService : Service() {
         controllerRef?.setOrientation(
             newConfig.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT,
         )
+        // Keep the window on-screen for the new orientation, but do NOT persist this
+        // reclamp: the saved slots are per-orientation and are reapplied by the uiState
+        // collector when minimized flips. Persisting here would clobber them with a
+        // transient, orientation-clamped position.
         composeView?.post {
             clampNow()
             composeView?.let { runCatching { windowManager.updateViewLayout(it, layoutParams) } }
-            if (minimizedNow) controllerRef?.setMinimizedPositionFromService(
-                layoutParams.x,
-                layoutParams.y
-            )
-            else controllerRef?.setPanelPosition(layoutParams.x, layoutParams.y)
         }
     }
 

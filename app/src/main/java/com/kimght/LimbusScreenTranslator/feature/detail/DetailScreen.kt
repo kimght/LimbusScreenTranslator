@@ -61,10 +61,7 @@ fun DetailScreen(
         onBack = onBack,
         onInstall = viewModel::install,
         onSetActive = viewModel::setActive,
-        onUninstall = {
-            viewModel.uninstall()
-            onUninstalled()
-        },
+        onUninstall = { viewModel.uninstall(onComplete = onUninstalled) },
         modifier = modifier,
     )
 }

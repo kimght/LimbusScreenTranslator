@@ -17,6 +17,7 @@ import com.kimght.LimbusScreenTranslator.data.network.LocalizationApi
 import com.kimght.LimbusScreenTranslator.data.repository.LocalizationRepository
 import com.kimght.LimbusScreenTranslator.data.repository.OverlayStateRepository
 import com.kimght.LimbusScreenTranslator.data.repository.ScenarioRepository
+import com.kimght.LimbusScreenTranslator.data.repository.SourceRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -83,6 +84,7 @@ class OverlayControllerTest {
             settings = settings,
             contentWriter = writer,
             scenarios = scenarios,
+            sources = SourceRepository(db.sourceDao(), settings),
         )
         overlayState = OverlayStateRepository(db.overlayStateDao(), clock = { 42L })
     }

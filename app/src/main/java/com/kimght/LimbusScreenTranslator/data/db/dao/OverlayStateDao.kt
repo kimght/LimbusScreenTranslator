@@ -20,6 +20,12 @@ interface OverlayStateDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertReadingState(state: ReadingStateEntity)
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertReadingStateIfAbsent(state: ReadingStateEntity)
+
+    @Query("UPDATE reading_state SET lineIndex = :lineIndex WHERE localizationId = :localizationId")
+    suspend fun updateLineIndex(localizationId: String, lineIndex: Int)
+
     @Query("DELETE FROM reading_state WHERE localizationId = :localizationId")
     suspend fun deleteReadingState(localizationId: String)
 

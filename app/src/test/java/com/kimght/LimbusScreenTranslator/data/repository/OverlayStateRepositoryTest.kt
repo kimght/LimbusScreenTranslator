@@ -66,4 +66,32 @@ class OverlayStateRepositoryTest {
 
         assertEquals(12, repo.readingState("loc").first().lineIndex)
     }
+
+    @Test
+    fun `re-selecting the current episode keeps line progress and recent episode`() = runTest {
+        repo.selectEpisode("loc", "S001B")
+        repo.setLineIndex("loc", 7)
+        repo.selectEpisode("loc", "S002A")
+        repo.setLineIndex("loc", 4)
+
+        repo.selectEpisode("loc", "S002A") // re-tap the episode already playing
+
+        val state = repo.readingState("loc").first()
+        assertEquals("S002A", state.currentEpisode)
+        assertEquals("S001B", state.recentEpisode)
+        assertEquals(4, state.lineIndex) // progress preserved, not reset to 0
+    }
+
+    @Test
+    fun `setLineIndex does not resurrect the previous episode`() = runTest {
+        repo.selectEpisode("loc", "S001B")
+        repo.selectEpisode("loc", "S002A")
+
+        repo.setLineIndex("loc", 9)
+
+        val state = repo.readingState("loc").first()
+        assertEquals("S002A", state.currentEpisode)
+        assertEquals("S001B", state.recentEpisode)
+        assertEquals(9, state.lineIndex)
+    }
 }

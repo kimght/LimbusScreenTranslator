@@ -36,24 +36,20 @@ class OverlayStateRepository(
     }
 
     suspend fun setLineIndex(localizationId: String, lineIndex: Int) {
-        val current = dao.getReadingState(localizationId)
-        dao.upsertReadingState(
-            (current ?: ReadingStateEntity(
-                localizationId,
-                null,
-                null,
-                0
-            )).copy(lineIndex = lineIndex),
-        )
+        // Column-only write: never touch the episode fields, so a stale line-settle
+        // arriving after an episode switch cannot revert the selected episode.
+        dao.insertReadingStateIfAbsent(ReadingStateEntity(localizationId, null, null, 0))
+        dao.updateLineIndex(localizationId, lineIndex)
     }
 
     suspend fun selectEpisode(localizationId: String, episodeCode: String) {
         val previous = dao.getReadingState(localizationId)?.currentEpisode
+        if (previous == episodeCode) return // re-tapping the current episode is a no-op
         dao.upsertReadingState(
             ReadingStateEntity(
                 localizationId = localizationId,
                 currentEpisode = episodeCode,
-                recentEpisode = previous?.takeIf { it != episodeCode },
+                recentEpisode = previous,
                 lineIndex = 0,
             ),
         )
