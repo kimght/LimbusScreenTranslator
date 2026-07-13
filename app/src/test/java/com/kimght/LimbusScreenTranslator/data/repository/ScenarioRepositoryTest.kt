@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.kimght.LimbusScreenTranslator.data.db.LimbusDatabase
+import com.kimght.LimbusScreenTranslator.data.db.dao.ChapterDao
+import com.kimght.LimbusScreenTranslator.data.db.entity.ChapterEpisodeEntity
 import com.kimght.LimbusScreenTranslator.data.install.ScenarioContent
 import com.kimght.LimbusScreenTranslator.data.install.RoomPackContentWriter
 import com.kimght.LimbusScreenTranslator.data.network.LocalizationApi
@@ -37,7 +39,7 @@ class ScenarioRepositoryTest {
             .allowMainThreadQueries()
             .build()
         server = MockWebServer().also { it.start() }
-        repo = ScenarioRepository(db.scenarioDao(), db.chapterDao(), LocalizationApi(OkHttpClient()))
+        repo = ScenarioRepository(db, db.scenarioDao(), db.chapterDao(), LocalizationApi(OkHttpClient()))
     }
 
     @After
@@ -66,6 +68,41 @@ class ScenarioRepositoryTest {
         assertEquals("Canto I", chapters[0].name)
         assertEquals(listOf("S001B", "S001A"), chapters[0].episodes.map { it.code })
         assertEquals(listOf("S002B"), chapters[1].episodes.map { it.code })
+    }
+
+    @Test
+    fun `refreshChapters rolls back so a mid-write failure keeps the existing index`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """{"chapters":[{"name":"Canto I","subtitle":"s","episodes":["S001B"]}]}""",
+            ),
+        )
+        repo.refreshChapters("Github", server.url("/chapters.json").toString())
+        assertEquals(1, repo.chapters("Github").size)
+
+        // A refresh whose episode insert fails must roll back its own deletes, not empty the index.
+        val failingChapterDao = object : ChapterDao by db.chapterDao() {
+            override suspend fun insertEpisodes(episodes: List<ChapterEpisodeEntity>) {
+                throw RuntimeException("boom")
+            }
+        }
+        val failing = ScenarioRepository(db, db.scenarioDao(), failingChapterDao, LocalizationApi(OkHttpClient()))
+        server.enqueue(
+            MockResponse().setBody(
+                """{"chapters":[{"name":"Canto II","subtitle":"s2","episodes":["S002B"]}]}""",
+            ),
+        )
+
+        assertThrows(RuntimeException::class.java) {
+            kotlinx.coroutines.runBlocking {
+                failing.refreshChapters("Github", server.url("/chapters2.json").toString())
+            }
+        }
+
+        val chapters = repo.chapters("Github")
+        assertEquals(1, chapters.size)
+        assertEquals("Canto I", chapters[0].name)
+        assertEquals(listOf("S001B"), chapters[0].episodes.map { it.code })
     }
 
     @Test

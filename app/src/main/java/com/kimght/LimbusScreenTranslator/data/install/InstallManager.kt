@@ -24,8 +24,6 @@ class InstallManager @Inject constructor(
     private val mutex = Mutex()
     private val jobs = mutableMapOf<String, Deferred<Boolean>>()
     private val states = MutableStateFlow<Map<String, InstallState>>(emptyMap())
-
-    /** Current install state for every pack key with activity since process start. */
     val installStates: StateFlow<Map<String, InstallState>> = states.asStateFlow()
 
     fun stateFor(key: String): InstallState = states.value[key] ?: InstallState.Idle
@@ -43,46 +41,58 @@ class InstallManager @Inject constructor(
     suspend fun install(localization: Localization, sourceName: String): Boolean {
         val key = PackKey.of(sourceName, localization.id)
         val run = mutex.withLock {
-            jobs.entries.removeIf { !it.value.isActive }
-            jobs[key]?.takeIf { it.isActive } ?: appScope.async {
-                var success = false
-                installer.install(localization, sourceName).collect { state ->
-                    success = state is InstallState.Done
-                    states.update { it + (key to state) }
-                }
-                success
-            }.also { jobs[key] = it }
+            val current = jobs[key]
+            if (current?.isActive == true) {
+                current
+            } else {
+                appScope.async {
+                    current?.let { runCatching { it.join() } }
+                    var success = false
+                    installer.install(localization, sourceName).collect { state ->
+                        success = state is InstallState.Done
+                        states.update { it + (key to state) }
+                    }
+                    success
+                }.also { jobs[key] = it }
+            }
         }
         return run.await()
     }
-
     suspend fun cancel(key: String) {
+        val job = mutex.withLock { jobs[key] } ?: return
+        job.cancelAndJoin()
         mutex.withLock {
-            val job = jobs.remove(key)
-            job?.cancelAndJoin()
-            states.update { it - key }
-        }
-    }
-
-    suspend fun cancelBySource(sourceName: String) {
-        val prefix = PackKey.of(sourceName, "")
-        mutex.withLock {
-            val matching = jobs.keys.filter { it.startsWith(prefix) }
-                .mapNotNull { key -> jobs.remove(key)?.let { key to it } }
-            matching.forEach { (key, job) ->
-                job.cancelAndJoin()
+            if (jobs[key] === job) {
+                jobs.remove(key)
                 states.update { it - key }
             }
         }
     }
 
-    suspend fun cancelAll() {
-        mutex.withLock {
-            val running = jobs.values.toList()
-            jobs.clear()
-            running.forEach { it.cancelAndJoin() }
-            states.update { emptyMap() }
+    suspend fun cancelBySource(sourceName: String) {
+        val prefix = PackKey.of(sourceName, "")
+        val matching = mutex.withLock {
+            jobs.filterKeys { it.startsWith(prefix) }.toList()
         }
+        matching.forEach { (key, job) ->
+            job.cancelAndJoin()
+            mutex.withLock {
+                if (jobs[key] === job) {
+                    jobs.remove(key)
+                    states.update { it - key }
+                }
+            }
+        }
+    }
+
+    suspend fun cancelAll() {
+        val running = mutex.withLock {
+            val snapshot = jobs.values.toList()
+            jobs.clear()
+            snapshot
+        }
+        running.forEach { it.cancelAndJoin() }
+        states.update { emptyMap() }
     }
 
     fun clear(key: String) = states.update { it - key }

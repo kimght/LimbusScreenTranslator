@@ -99,7 +99,7 @@ class LocalizationRepositoryTest {
             produceFile = { File(settingsDir, "settings.preferences_pb") },
         )
         settings = SettingsRepository(dataStore)
-        scenarios = ScenarioRepository(db.scenarioDao(), db.chapterDao(), api)
+        scenarios = ScenarioRepository(db, db.scenarioDao(), db.chapterDao(), api)
         repo = LocalizationRepository(
             api = api,
             installedPackDao = db.installedPackDao(),
@@ -147,6 +147,23 @@ class LocalizationRepositoryTest {
         assertEquals(1, chapters.size)
         assertEquals("Canto I", chapters[0].name)
         assertEquals(listOf("S001B", "S001A"), chapters[0].episodes.map { it.code })
+    }
+
+    @Test
+    fun `install retries a transient chapters fetch failure`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(500))
+        server.enqueue(
+            MockResponse().setBody(
+                """{"chapters":[{"name":"Canto I","subtitle":"s","episodes":["S001B"]}]}""",
+            ),
+        )
+
+        val ok = repo.install(localization(), "Github", server.url("/chapters.json").toString())
+
+        assertTrue(ok)
+        val chapters = scenarios.chapters("Github")
+        assertEquals(1, chapters.size)
+        assertEquals(listOf("S001B"), chapters[0].episodes.map { it.code })
     }
 
     @Test

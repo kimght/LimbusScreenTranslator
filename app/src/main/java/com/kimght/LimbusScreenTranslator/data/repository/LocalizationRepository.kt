@@ -12,12 +12,15 @@ import com.kimght.LimbusScreenTranslator.domain.model.Localization
 import com.kimght.LimbusScreenTranslator.domain.model.LocalizationStatus
 import com.kimght.LimbusScreenTranslator.domain.model.PackFormat
 import com.kimght.LimbusScreenTranslator.domain.model.PackKey
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 data class LocalizationListing(
     val localization: Localization,
@@ -102,9 +105,22 @@ class LocalizationRepository @Inject constructor(
     ): Boolean {
         val installed = installManager.install(localization, sourceName)
         if (installed && !chaptersUrl.isNullOrBlank()) {
-            runCatching { scenarios.refreshChapters(sourceName, chaptersUrl) }
+            refreshChaptersWithRetry(sourceName, chaptersUrl)
         }
         return installed
+    }
+
+    private suspend fun refreshChaptersWithRetry(sourceName: String, chaptersUrl: String) {
+        var delayMs = CHAPTER_REFRESH_INITIAL_BACKOFF_MS
+        repeat(CHAPTER_REFRESH_ATTEMPTS) { attempt ->
+            val result = runCatching { scenarios.refreshChapters(sourceName, chaptersUrl) }
+            if (result.isSuccess) return
+            result.exceptionOrNull()?.let { if (it is CancellationException) throw it }
+            if (attempt < CHAPTER_REFRESH_ATTEMPTS - 1) {
+                delay(delayMs.milliseconds)
+                delayMs *= 2
+            }
+        }
     }
 
     suspend fun setActive(key: String) = settings.setActiveLocalizationId(key)
@@ -132,6 +148,11 @@ class LocalizationRepository @Inject constructor(
         }
         scenarios.clearAllChapters()
         settings.setActiveLocalizationId(null)
+    }
+
+    private companion object {
+        const val CHAPTER_REFRESH_ATTEMPTS = 3
+        const val CHAPTER_REFRESH_INITIAL_BACKOFF_MS = 500L
     }
 }
 

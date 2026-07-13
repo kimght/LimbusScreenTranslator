@@ -1,5 +1,7 @@
 package com.kimght.LimbusScreenTranslator.data.repository
 
+import androidx.room.withTransaction
+import com.kimght.LimbusScreenTranslator.data.db.LimbusDatabase
 import com.kimght.LimbusScreenTranslator.data.db.dao.ChapterDao
 import com.kimght.LimbusScreenTranslator.data.db.dao.ScenarioDao
 import com.kimght.LimbusScreenTranslator.data.db.entity.ChapterEntity
@@ -11,22 +13,17 @@ import com.kimght.LimbusScreenTranslator.domain.model.Episode
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Raised when a selected episode has no scenario in the active pack (spec §13). */
 class EpisodeUnavailableException(val episodeCode: String) :
     Exception("No scenario data for episode $episodeCode")
 
-/**
- * Backs the overlay's chapter-select and dialogue reads from Room (the system of record). Lines
- * are returned already resolved and spacer-free, ordered by line index.
- */
 @Singleton
 class ScenarioRepository @Inject constructor(
+    private val db: LimbusDatabase,
     private val scenarioDao: ScenarioDao,
     private val chapterDao: ChapterDao,
     private val api: LocalizationApi,
 ) {
 
-    /** Fetch and persist the chapter list for [sourceName] from [chaptersUrl]. */
     suspend fun refreshChapters(sourceName: String, chaptersUrl: String) {
         val dto = api.getChapters(chaptersUrl)
         val chapters = ArrayList<ChapterEntity>(dto.chapters.size)
@@ -47,25 +44,28 @@ class ScenarioRepository @Inject constructor(
                 )
             }
         }
-        chapterDao.deleteEpisodes(sourceName)
-        chapterDao.deleteChapters(sourceName)
-        chapterDao.insertChapters(chapters)
-        chapterDao.insertEpisodes(episodes)
+        db.withTransaction {
+            chapterDao.deleteEpisodes(sourceName)
+            chapterDao.deleteChapters(sourceName)
+            chapterDao.insertChapters(chapters)
+            chapterDao.insertEpisodes(episodes)
+        }
     }
 
-    /** Factory reset: drop the chapter-select index for every source. */
     suspend fun clearAllChapters() {
-        chapterDao.deleteAllEpisodes()
-        chapterDao.deleteAllChapters()
+        db.withTransaction {
+            chapterDao.deleteAllEpisodes()
+            chapterDao.deleteAllChapters()
+        }
     }
 
-    /** Drop the chapter-select index for one source (source removal, spec §2). */
     suspend fun clearChapters(sourceName: String) {
-        chapterDao.deleteEpisodes(sourceName)
-        chapterDao.deleteChapters(sourceName)
+        db.withTransaction {
+            chapterDao.deleteEpisodes(sourceName)
+            chapterDao.deleteChapters(sourceName)
+        }
     }
 
-    /** The chapter list for a source, grouped and ordered for the chapter-select view. */
     suspend fun chapters(sourceName: String): List<Chapter> {
         val chapterRows = chapterDao.chaptersFor(sourceName)
         val episodeRows = chapterDao.episodesFor(sourceName).groupBy { it.chapterPosition }

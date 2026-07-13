@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -29,6 +29,12 @@ class PackInstallerTest {
     @After
     fun tearDown() {
         cacheRoot.deleteRecursively()
+    }
+
+    /** The pipeline deletes its per-pack work dir on completion, so nothing should linger. */
+    private fun assertNoWorkDirLeftovers() {
+        val installDir = File(cacheRoot, "install")
+        assertTrue(installDir.listFiles()?.isEmpty() ?: true)
     }
 
     private class FakeDownloader(private val zipBytes: ByteArray) : Downloader {
@@ -116,7 +122,7 @@ class PackInstallerTest {
         assertEquals("line one", scenario.lines[0].text)
         assertEquals("Грегор", scenario.lines[1].speakerName)
 
-        assertFalse(File(File(cacheRoot, "install"), "ru-Test").exists())
+        assertNoWorkDirLeftovers()
     }
 
     @Test
@@ -133,7 +139,7 @@ class PackInstallerTest {
 
         assertEquals(InstallState.Failed(InstallError.SIZE_MISMATCH), states.last())
         assertNull(writer.saved)
-        assertFalse(File(File(cacheRoot, "install"), "ru-Test").exists())
+        assertNoWorkDirLeftovers()
     }
 
     @Test
@@ -165,7 +171,7 @@ class PackInstallerTest {
         val states = installer.install(localization(size = 10), "Github").toList()
 
         assertEquals(InstallState.Failed(InstallError.DOWNLOAD_FAILED), states.last())
-        assertFalse(File(File(cacheRoot, "install"), "ru-Test").exists())
+        assertNoWorkDirLeftovers()
     }
 
     @Test
@@ -188,6 +194,15 @@ class PackInstallerTest {
         assertEquals(InstallState.Done, mirrorStates.last())
         assertEquals("Github", githubSaved?.sourceName)
         assertEquals("Mirror", mirrorSaved?.sourceName)
+    }
+
+    @Test
+    fun `keys that collided under URLEncoder now map to distinct work dirs`() {
+        // Under the old `encode(source)-encode(id)` scheme both of these produced "My-pack-x".
+        assertNotEquals(
+            workDirName("My-pack", "x"),
+            workDirName("My", "pack-x"),
+        )
     }
 
     @Test

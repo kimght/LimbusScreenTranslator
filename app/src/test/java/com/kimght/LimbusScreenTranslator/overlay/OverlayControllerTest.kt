@@ -75,7 +75,7 @@ class OverlayControllerTest {
             produceFile = { File(settingsDir, "settings.preferences_pb") },
         )
         settings = SettingsRepository(dataStore)
-        scenarios = ScenarioRepository(db.scenarioDao(), db.chapterDao(), api)
+        scenarios = ScenarioRepository(db, db.scenarioDao(), db.chapterDao(), api)
         localizations = LocalizationRepository(
             api = api,
             installedPackDao = db.installedPackDao(),

@@ -4,6 +4,7 @@ import com.kimght.LimbusScreenTranslator.data.network.Downloader
 import com.kimght.LimbusScreenTranslator.domain.model.InstalledPack
 import com.kimght.LimbusScreenTranslator.domain.model.Localization
 import com.kimght.LimbusScreenTranslator.domain.model.PackFormat
+import com.kimght.LimbusScreenTranslator.domain.model.PackKey
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -11,7 +12,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flowOn
 import java.io.File
-import java.net.URLEncoder
+import java.security.MessageDigest
 
 class PackInstaller(
     private val downloader: Downloader,
@@ -24,10 +25,7 @@ class PackInstaller(
     fun install(localization: Localization, sourceName: String): Flow<InstallState> = channelFlow {
         val workDir = File(
             File(cacheRoot, "install"),
-            URLEncoder.encode(sourceName, "UTF-8") + "-" + URLEncoder.encode(
-                localization.id,
-                "UTF-8"
-            ),
+            workDirName(sourceName, localization.id),
         )
         try {
             if (localization.format == PackFormat.UNKNOWN) {
@@ -108,4 +106,10 @@ class PackInstaller(
 
     private fun percentOf(read: Long, total: Long): Int =
         if (total > 0) ((read * 100) / total).toInt().coerceIn(0, 100) else 0
+}
+
+internal fun workDirName(sourceName: String, id: String): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+        .digest(PackKey.of(sourceName, id).toByteArray(Charsets.UTF_8))
+    return digest.joinToString("") { "%02x".format(it) }
 }
