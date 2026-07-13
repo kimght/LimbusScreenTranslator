@@ -1,0 +1,290 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "70971b26d9477c7b73fd6b56b3564c2d",
+    "entities": [
+      {
+        "tableName": "installed_pack",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `version` TEXT NOT NULL, `sourceName` TEXT NOT NULL, `installedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "version",
+            "columnName": "version",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sourceName",
+            "columnName": "sourceName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "installedAt",
+            "columnName": "installedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "source",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`name` TEXT NOT NULL, `url` TEXT NOT NULL, PRIMARY KEY(`name`))",
+        "fields": [
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "url",
+            "columnName": "url",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "name"
+          ]
+        }
+      },
+      {
+        "tableName": "scenario_line",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`localizationId` TEXT NOT NULL, `scenarioCode` TEXT NOT NULL, `lineIndex` INTEGER NOT NULL, `content` TEXT NOT NULL, `speakerName` TEXT, `title` TEXT, `place` TEXT, PRIMARY KEY(`localizationId`, `scenarioCode`, `lineIndex`))",
+        "fields": [
+          {
+            "fieldPath": "localizationId",
+            "columnName": "localizationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "scenarioCode",
+            "columnName": "scenarioCode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lineIndex",
+            "columnName": "lineIndex",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "speakerName",
+            "columnName": "speakerName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "place",
+            "columnName": "place",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "localizationId",
+            "scenarioCode",
+            "lineIndex"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_scenario_line_localizationId_scenarioCode",
+            "unique": false,
+            "columnNames": [
+              "localizationId",
+              "scenarioCode"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_scenario_line_localizationId_scenarioCode` ON `${TABLE_NAME}` (`localizationId`, `scenarioCode`)"
+          }
+        ]
+      },
+      {
+        "tableName": "chapter",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`sourceName` TEXT NOT NULL, `position` INTEGER NOT NULL, `name` TEXT NOT NULL, `subtitle` TEXT NOT NULL, PRIMARY KEY(`sourceName`, `position`))",
+        "fields": [
+          {
+            "fieldPath": "sourceName",
+            "columnName": "sourceName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "subtitle",
+            "columnName": "subtitle",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "sourceName",
+            "position"
+          ]
+        }
+      },
+      {
+        "tableName": "chapter_episode",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`sourceName` TEXT NOT NULL, `chapterPosition` INTEGER NOT NULL, `position` INTEGER NOT NULL, `episodeCode` TEXT NOT NULL, PRIMARY KEY(`sourceName`, `chapterPosition`, `position`))",
+        "fields": [
+          {
+            "fieldPath": "sourceName",
+            "columnName": "sourceName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chapterPosition",
+            "columnName": "chapterPosition",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "episodeCode",
+            "columnName": "episodeCode",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "sourceName",
+            "chapterPosition",
+            "position"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_chapter_episode_sourceName_chapterPosition",
+            "unique": false,
+            "columnNames": [
+              "sourceName",
+              "chapterPosition"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_chapter_episode_sourceName_chapterPosition` ON `${TABLE_NAME}` (`sourceName`, `chapterPosition`)"
+          }
+        ]
+      },
+      {
+        "tableName": "episode_progress",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`localizationId` TEXT NOT NULL, `episodeCode` TEXT NOT NULL, `viewedAt` INTEGER NOT NULL, PRIMARY KEY(`localizationId`, `episodeCode`))",
+        "fields": [
+          {
+            "fieldPath": "localizationId",
+            "columnName": "localizationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "episodeCode",
+            "columnName": "episodeCode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "viewedAt",
+            "columnName": "viewedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "localizationId",
+            "episodeCode"
+          ]
+        }
+      },
+      {
+        "tableName": "reading_state",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`localizationId` TEXT NOT NULL, `currentEpisode` TEXT, `recentEpisode` TEXT, `lineIndex` INTEGER NOT NULL, PRIMARY KEY(`localizationId`))",
+        "fields": [
+          {
+            "fieldPath": "localizationId",
+            "columnName": "localizationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "currentEpisode",
+            "columnName": "currentEpisode",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "recentEpisode",
+            "columnName": "recentEpisode",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "lineIndex",
+            "columnName": "lineIndex",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "localizationId"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '70971b26d9477c7b73fd6b56b3564c2d')"
+    ]
+  }
+}

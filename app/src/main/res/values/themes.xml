@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launch/window theme. Compose draws the real UI; this only sets a dark window background
+         and bar colors so there is no light flash before first composition. -->
+    <style name="Theme.LimbusScreenTranslator" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/brand_background</item>
+        <item name="android:statusBarColor">@color/brand_background</item>
+        <item name="android:navigationBarColor">@color/brand_background</item>
+    </style>
+</resources>

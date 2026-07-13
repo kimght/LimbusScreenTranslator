@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand window background (matches BgBackground in the Compose theme) to avoid a light flash
+         while the activity starts up. -->
+    <color name="brand_background">#FF231C20</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>

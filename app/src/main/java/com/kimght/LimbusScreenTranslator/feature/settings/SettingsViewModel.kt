@@ -1,0 +1,113 @@
+package com.kimght.LimbusScreenTranslator.feature.settings
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.kimght.LimbusScreenTranslator.data.datastore.Settings
+import com.kimght.LimbusScreenTranslator.data.datastore.SettingsRepository
+import com.kimght.LimbusScreenTranslator.data.repository.AddSourceResult
+import com.kimght.LimbusScreenTranslator.data.repository.LocalizationRepository
+import com.kimght.LimbusScreenTranslator.data.repository.SourceRepository
+import com.kimght.LimbusScreenTranslator.domain.model.Source
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+import kotlin.math.roundToInt
+
+data class UiLanguage(val code: String, val label: String)
+
+data class SettingsUiState(
+    val opacity: Float = Settings.DEFAULT_OPACITY,
+    val uiLanguage: String = Settings.defaultUiLanguage(),
+    val sources: List<Source> = emptyList(),
+) {
+    val opacityPercent: Int get() = (opacity * 100).roundToInt()
+}
+
+@HiltViewModel
+class SettingsViewModel @Inject constructor(
+    private val settings: SettingsRepository,
+    private val sourceRepository: SourceRepository,
+    private val localizations: LocalizationRepository,
+) : ViewModel() {
+
+    private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)
+    val messages: SharedFlow<String> = _messages
+
+    val uiState: StateFlow<SettingsUiState> = combine(
+        settings.settings,
+        sourceRepository.sources,
+    ) { prefs, sources ->
+        SettingsUiState(
+            opacity = prefs.opacity,
+            uiLanguage = prefs.uiLanguage
+                .takeIf { code -> UI_LANGUAGES.any { it.code == code } }
+                ?: Settings.defaultUiLanguage(),
+            sources = sources,
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
+
+    fun setOpacityPercent(percent: Int) {
+        viewModelScope.launch { settings.setOpacity(percent / 100f) }
+    }
+
+    fun setUiLanguage(code: String) {
+        viewModelScope.launch { settings.setUiLanguage(code) }
+    }
+
+    fun addSource(name: String, hostOrUrl: String) {
+        val trimmedName = name.trim()
+        if (trimmedName.isEmpty()) return
+        val url = normalizeSourceInput(hostOrUrl, trimmedName)
+        viewModelScope.launch {
+            when (sourceRepository.addSource(trimmedName, url)) {
+                AddSourceResult.Success -> _messages.tryEmit("Source added · $trimmedName")
+                AddSourceResult.DuplicateName -> _messages.tryEmit("Source already exists.")
+            }
+        }
+    }
+
+    fun removeSource(name: String) {
+        viewModelScope.launch {
+            localizations.uninstallBySource(name)
+            sourceRepository.removeSource(name)
+            _messages.tryEmit("Source removed · $name")
+        }
+    }
+
+    fun resetEverything() {
+        viewModelScope.launch {
+            localizations.uninstallAll()
+            sourceRepository.restoreDefaults()
+            settings.resetToDefaults()
+            _messages.tryEmit("Everything reset to defaults")
+        }
+    }
+
+    companion object {
+        val UI_LANGUAGES = listOf(
+            UiLanguage("en", "English"),
+            UiLanguage("ru", "Русский"),
+        )
+    }
+}
+
+internal fun normalizeSourceInput(hostOrUrl: String, name: String): String {
+    val raw = hostOrUrl.trim()
+    if (raw.startsWith("http://", ignoreCase = true) || raw.startsWith(
+            "https://",
+            ignoreCase = true
+        )
+    ) {
+        return raw
+    }
+    val host = raw.ifBlank {
+        name.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-') + ".mirror.dev"
+    }
+    return "https://$host/localizations/localizations.json"
+}

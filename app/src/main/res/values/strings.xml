@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Limbus Screen Translator</string>
+
+    <!-- Overlay foreground service -->
+    <string name="overlay_notification_channel">Translation overlay</string>
+    <string name="overlay_notification_title">Translation overlay active</string>
+    <string name="overlay_notification_text">Tap to open Limbus Screen Translator</string>
+    <string name="overlay_permission_required">Allow drawing over other apps to use the overlay</string>
+</resources>

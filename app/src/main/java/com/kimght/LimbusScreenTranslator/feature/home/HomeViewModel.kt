@@ -1,0 +1,129 @@
+package com.kimght.LimbusScreenTranslator.feature.home
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.kimght.LimbusScreenTranslator.data.datastore.SettingsRepository
+import com.kimght.LimbusScreenTranslator.data.install.InstallState
+import com.kimght.LimbusScreenTranslator.data.repository.LocalizationRepository
+import com.kimght.LimbusScreenTranslator.data.repository.SourceRepository
+import com.kimght.LimbusScreenTranslator.domain.model.Localization
+import com.kimght.LimbusScreenTranslator.domain.model.hasUpdate
+import com.kimght.LimbusScreenTranslator.overlay.OverlayRunningState
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+data class ActiveLocalization(
+    val id: String,
+    val name: String,
+    val flag: String,
+    val installedVersion: String,
+    val availableVersion: String,
+    val sourceName: String,
+    val description: String,
+    val updateDescription: String?,
+    val hasUpdate: Boolean,
+    val isInstalling: Boolean,
+)
+
+data class HomeUiState(
+    val loading: Boolean = true,
+    val active: ActiveLocalization? = null,
+    val overlayRunning: Boolean = false,
+)
+
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    private val localizationRepository: LocalizationRepository,
+    private val sourceRepository: SourceRepository,
+    private val settings: SettingsRepository,
+    overlayRunningState: OverlayRunningState,
+) : ViewModel() {
+    private val catalogs = MutableStateFlow<Map<String, Map<String, Localization>>>(emptyMap())
+    private val chapterUrls = MutableStateFlow<Map<String, String?>>(emptyMap())
+
+    val uiState: StateFlow<HomeUiState> = combine(
+        settings.settings,
+        localizationRepository.installedPacks,
+        localizationRepository.installStates,
+        catalogs,
+        overlayRunningState.isRunning,
+    ) { prefs, installed, installStates, catalog, overlayRunning ->
+        fun offerFor(sourceName: String, id: String): Localization? = catalog[sourceName]?.get(id)
+
+        val activePack = installed.firstOrNull { it.key == prefs.activeLocalizationId }
+        val active = activePack?.let { pack ->
+            val offer = offerFor(pack.sourceName, pack.id)
+            val available = offer?.version ?: pack.version
+            ActiveLocalization(
+                id = pack.id,
+                name = pack.name.ifBlank { pack.id },
+                flag = pack.flag.ifBlank { "?" },
+                installedVersion = pack.version,
+                availableVersion = available,
+                sourceName = pack.sourceName,
+                description = pack.description,
+                updateDescription = offer?.description,
+                hasUpdate = hasUpdate(pack.version, available),
+                isInstalling = installStates[pack.key].isInstalling(),
+            )
+        }
+
+        HomeUiState(
+            loading = false,
+            active = active,
+            overlayRunning = overlayRunning,
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
+
+    init {
+        refresh()
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            val sources = sourceRepository.sources.first()
+            val result = mutableMapOf<String, Map<String, Localization>>()
+            val urls = mutableMapOf<String, String?>()
+            for (source in sources) {
+                val catalog =
+                    runCatching { localizationRepository.fetchCatalog(source.url) }.getOrNull()
+                if (catalog != null) {
+                    result[source.name] = catalog.localizations.associateBy { it.id }
+                    urls[source.name] = catalog.chaptersUrl
+                }
+            }
+            if (result.isNotEmpty()) {
+                catalogs.value = result
+                chapterUrls.value = urls
+            }
+        }
+    }
+
+    fun updateActive(onDone: () -> Unit) {
+        val active = uiState.value.active ?: return onDone()
+        if (!active.hasUpdate) return onDone()
+        viewModelScope.launch {
+            val offer = catalogs.value[active.sourceName]?.get(active.id)
+            if (offer != null) {
+                localizationRepository.install(
+                    offer,
+                    active.sourceName,
+                    chapterUrls.value[active.sourceName]
+                )
+            }
+            onDone()
+        }
+    }
+}
+
+private fun InstallState?.isInstalling(): Boolean = when (this) {
+    null, InstallState.Idle, InstallState.Done, is InstallState.Failed -> false
+    else -> true
+}
