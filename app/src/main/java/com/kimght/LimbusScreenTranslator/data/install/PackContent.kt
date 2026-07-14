@@ -8,7 +8,14 @@ data class ScenarioContent(
     val lines: List<DialogueLine>,
 )
 
+/** Thrown lazily while iterating a scenario sequence when a pack file can't be read or parsed. */
+class PackParseException(cause: Throwable) : Exception(cause)
+
 interface PackContentWriter {
-    suspend fun replacePack(pack: InstalledPack, scenarios: List<ScenarioContent>)
+    /**
+     * Atomically replaces the pack's content. The sequence is consumed exactly once, inside
+     * the write, so scenarios stream into storage without materializing the whole pack.
+     */
+    suspend fun replacePack(pack: InstalledPack, scenarios: Sequence<ScenarioContent>)
     suspend fun deletePack(id: String)
 }

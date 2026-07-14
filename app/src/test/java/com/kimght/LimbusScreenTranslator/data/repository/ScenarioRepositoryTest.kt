@@ -110,7 +110,7 @@ class ScenarioRepositoryTest {
         val pack = InstalledPack("loc", "v1", "Github", 0L)
         RoomPackContentWriter(db).replacePack(
             pack,
-            listOf(
+            sequenceOf(
                 ScenarioContent(
                     "S001B",
                     listOf(

@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flowOn
 import java.io.File
 import java.security.MessageDigest
+import java.util.zip.ZipFile
 
 class PackInstaller(
     private val downloader: Downloader,
@@ -56,46 +57,44 @@ class PackInstaller(
             }
 
             send(InstallState.Extracting)
-            val extractDir = File(workDir, "extracted")
-            try {
-                ZipUtils.extract(zip, extractDir)
+            val archive = try {
+                ZipFile(zip)
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
                 send(InstallState.Failed(InstallError.EXTRACTION_FAILED))
                 return@channelFlow
             }
-            val languageDir = ZipUtils.locateLanguageDir(extractDir, localization.format)
-            if (languageDir == null) {
-                send(InstallState.Failed(InstallError.LANGUAGE_DIR_NOT_FOUND))
-                return@channelFlow
-            }
+            archive.use {
+                val languageDirPrefix = ZipUtils.locateLanguageDir(archive, localization.format)
+                if (languageDirPrefix == null) {
+                    send(InstallState.Failed(InstallError.LANGUAGE_DIR_NOT_FOUND))
+                    return@channelFlow
+                }
 
-            send(InstallState.Persisting)
-            val scenarios = try {
-                PackContentParser.parse(languageDir)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                send(InstallState.Failed(InstallError.PARSE_FAILED))
-                return@channelFlow
-            }
-            val pack = InstalledPack(
-                id = localization.id,
-                version = localization.version,
-                sourceName = sourceName,
-                installedAt = clock(),
-                name = localization.name,
-                flag = localization.flag,
-                description = localization.description,
-            )
-            try {
-                writer.replacePack(pack, scenarios)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                send(InstallState.Failed(InstallError.PERSIST_FAILED))
-                return@channelFlow
+                send(InstallState.Persisting)
+                val pack = InstalledPack(
+                    id = localization.id,
+                    version = localization.version,
+                    sourceName = sourceName,
+                    installedAt = clock(),
+                    name = localization.name,
+                    flag = localization.flag,
+                    description = localization.description,
+                )
+                try {
+                    // Scenarios are parsed from the archive lazily while they stream into
+                    // the writer, so the pack is never extracted or held in memory whole.
+                    writer.replacePack(pack, PackContentParser.parse(archive, languageDirPrefix))
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: PackParseException) {
+                    send(InstallState.Failed(InstallError.PARSE_FAILED))
+                    return@channelFlow
+                } catch (_: Exception) {
+                    send(InstallState.Failed(InstallError.PERSIST_FAILED))
+                    return@channelFlow
+                }
             }
 
             send(InstallState.Done)

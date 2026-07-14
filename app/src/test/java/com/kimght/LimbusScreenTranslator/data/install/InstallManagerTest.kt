@@ -73,7 +73,8 @@ class InstallManagerTest {
 
     private class RecordingWriter : PackContentWriter {
         val saved = mutableListOf<InstalledPack>()
-        override suspend fun replacePack(pack: InstalledPack, scenarios: List<ScenarioContent>) {
+        override suspend fun replacePack(pack: InstalledPack, scenarios: Sequence<ScenarioContent>) {
+            scenarios.toList()
             saved += pack
         }
         override suspend fun deletePack(id: String) {}

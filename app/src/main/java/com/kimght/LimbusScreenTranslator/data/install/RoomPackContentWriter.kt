@@ -17,14 +17,15 @@ class RoomPackContentWriter @Inject constructor(
         const val INSERT_CHUNK = 2000
     }
 
-    override suspend fun replacePack(pack: InstalledPack, scenarios: List<ScenarioContent>) {
+    override suspend fun replacePack(pack: InstalledPack, scenarios: Sequence<ScenarioContent>) {
         db.withTransaction {
             val scenarioDao = db.scenarioDao()
             scenarioDao.deleteForLocalization(pack.key)
 
-            val rows = scenarios.flatMap { scenario ->
-                scenario.lines.map { line ->
-                    ScenarioLineEntity(
+            val buffer = ArrayList<ScenarioLineEntity>(INSERT_CHUNK)
+            scenarios.forEach { scenario ->
+                scenario.lines.forEach { line ->
+                    buffer += ScenarioLineEntity(
                         localizationId = pack.key,
                         scenarioCode = scenario.code,
                         lineIndex = line.index,
@@ -33,9 +34,13 @@ class RoomPackContentWriter @Inject constructor(
                         title = line.title,
                         place = line.place,
                     )
+                    if (buffer.size >= INSERT_CHUNK) {
+                        scenarioDao.insertLines(buffer)
+                        buffer.clear()
+                    }
                 }
             }
-            rows.chunked(INSERT_CHUNK).forEach { scenarioDao.insertLines(it) }
+            if (buffer.isNotEmpty()) scenarioDao.insertLines(buffer)
 
             db.installedPackDao().upsert(
                 InstalledPackEntity(

@@ -29,7 +29,7 @@ import com.kimght.LimbusScreenTranslator.data.db.entity.SourceEntity
         EpisodeProgressEntity::class,
         ReadingStateEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class LimbusDatabase : RoomDatabase() {

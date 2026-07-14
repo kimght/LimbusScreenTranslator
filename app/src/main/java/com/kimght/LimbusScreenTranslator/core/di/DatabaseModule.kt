@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.kimght.LimbusScreenTranslator.data.db.LimbusDatabase
 import com.kimght.LimbusScreenTranslator.data.db.MIGRATION_1_2
+import com.kimght.LimbusScreenTranslator.data.db.MIGRATION_2_3
 import com.kimght.LimbusScreenTranslator.data.db.dao.ChapterDao
 import com.kimght.LimbusScreenTranslator.data.db.dao.InstalledPackDao
 import com.kimght.LimbusScreenTranslator.data.db.dao.OverlayStateDao
@@ -24,7 +25,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): LimbusDatabase =
         Room.databaseBuilder(context, LimbusDatabase::class.java, LimbusDatabase.NAME)
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .build()
 
     @Provides

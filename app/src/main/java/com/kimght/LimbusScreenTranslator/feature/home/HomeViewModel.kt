@@ -7,9 +7,13 @@ import com.kimght.LimbusScreenTranslator.data.install.InstallState
 import com.kimght.LimbusScreenTranslator.data.repository.LocalizationRepository
 import com.kimght.LimbusScreenTranslator.data.repository.SourceRepository
 import com.kimght.LimbusScreenTranslator.domain.model.Localization
+import com.kimght.LimbusScreenTranslator.domain.model.Source
 import com.kimght.LimbusScreenTranslator.domain.model.hasUpdate
 import com.kimght.LimbusScreenTranslator.overlay.OverlayRunningState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -89,19 +93,14 @@ class HomeViewModel @Inject constructor(
     fun refresh() {
         viewModelScope.launch {
             val sources = sourceRepository.sources.first()
-            val result = mutableMapOf<String, Map<String, Localization>>()
-            val urls = mutableMapOf<String, String?>()
-            for (source in sources) {
-                val catalog =
-                    runCatching { localizationRepository.fetchCatalog(source.url) }.getOrNull()
-                if (catalog != null) {
-                    result[source.name] = catalog.localizations.associateBy { it.id }
-                    urls[source.name] = catalog.chaptersUrl
-                }
+            val fetched = fetchSourceCatalogs(sources) { source ->
+                runCatching { localizationRepository.fetchCatalog(source.url) }.getOrNull()
             }
-            if (result.isNotEmpty()) {
-                catalogs.value = result
-                chapterUrls.value = urls
+            if (fetched.isNotEmpty()) {
+                catalogs.value = fetched.mapValues { (_, catalog) ->
+                    catalog.localizations.associateBy { it.id }
+                }
+                chapterUrls.value = fetched.mapValues { (_, catalog) -> catalog.chaptersUrl }
             }
         }
     }
@@ -126,4 +125,15 @@ class HomeViewModel @Inject constructor(
 private fun InstallState?.isInstalling(): Boolean = when (this) {
     null, InstallState.Idle, InstallState.Done, is InstallState.Failed -> false
     else -> true
+}
+
+internal suspend fun <T : Any> fetchSourceCatalogs(
+    sources: List<Source>,
+    fetch: suspend (Source) -> T?,
+): Map<String, T> = coroutineScope {
+    sources
+        .map { source -> async { source.name to fetch(source) } }
+        .awaitAll()
+        .mapNotNull { (name, catalog) -> catalog?.let { name to it } }
+        .toMap()
 }

@@ -96,9 +96,15 @@ class OverlayController(
             )
         } else {
             val reading = content.reading
-            val expanded = local.expanded
-                ?: defaultExpandedChapter(content.chapters, reading.currentEpisode)
-            val nav = episodeNav(content.chapters, reading.currentEpisode)
+            val model = chapterModelFor(
+                ChapterKey(
+                    chapters = content.chapters,
+                    currentEpisode = reading.currentEpisode,
+                    viewed = reading.viewedEpisodes,
+                    expanded = local.expanded,
+                    sourceName = content.pack.sourceName,
+                ),
+            )
             OverlayUiState(
                 present = true,
                 mode = local.mode,
@@ -115,18 +121,46 @@ class OverlayController(
                     (content.lines.size - 1).coerceAtLeast(0)
                 ),
                 episodeUnavailable = content.unavailable,
-                chapters = buildChapterRows(
-                    content.chapters, reading.currentEpisode, reading.viewedEpisodes, expanded,
-                ),
-                prevEpisode = nav.prev,
-                nextEpisode = nav.next,
-                chapterContext = chapterContextLabel(
-                    content.chapters.sumOf { it.episodes.size },
-                    content.pack.sourceName,
-                ),
+                chapters = model.rows,
+                prevEpisode = model.nav.prev,
+                nextEpisode = model.nav.next,
+                chapterContext = model.contextLabel,
             )
         }
     }.stateIn(scope, SharingStarted.Eagerly, OverlayUiState())
+
+    private data class ChapterKey(
+        val chapters: List<Chapter>,
+        val currentEpisode: String?,
+        val viewed: Set<String>,
+        val expanded: String?,
+        val sourceName: String,
+    )
+
+    private data class ChapterModel(
+        val rows: List<ChapterRow>,
+        val nav: EpisodeNav,
+        val contextLabel: String,
+    )
+
+    private var cachedChapterKey: ChapterKey? = null
+    private var cachedChapterModel: ChapterModel? = null
+
+    private fun chapterModelFor(key: ChapterKey): ChapterModel {
+        cachedChapterModel?.takeIf { key == cachedChapterKey }?.let { return it }
+        val expanded = key.expanded ?: defaultExpandedChapter(key.chapters, key.currentEpisode)
+        return ChapterModel(
+            rows = buildChapterRows(key.chapters, key.currentEpisode, key.viewed, expanded),
+            nav = episodeNav(key.chapters, key.currentEpisode),
+            contextLabel = chapterContextLabel(
+                key.chapters.sumOf { it.episodes.size },
+                key.sourceName,
+            ),
+        ).also {
+            cachedChapterKey = key
+            cachedChapterModel = it
+        }
+    }
 
     fun selectMode(target: OverlayMode) {
         if (mode.value == target) return

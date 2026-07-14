@@ -9,15 +9,22 @@ import androidx.test.core.app.ApplicationProvider
 import app.cash.turbine.test
 import com.kimght.LimbusScreenTranslator.data.datastore.SettingsRepository
 import com.kimght.LimbusScreenTranslator.data.db.LimbusDatabase
+import com.kimght.LimbusScreenTranslator.data.db.entity.ChapterEntity
+import com.kimght.LimbusScreenTranslator.data.db.entity.ChapterEpisodeEntity
 import com.kimght.LimbusScreenTranslator.data.install.InstallManager
 import com.kimght.LimbusScreenTranslator.data.install.PackInstaller
 import com.kimght.LimbusScreenTranslator.data.install.RoomPackContentWriter
+import com.kimght.LimbusScreenTranslator.data.install.ScenarioContent
 import com.kimght.LimbusScreenTranslator.data.network.Downloader
 import com.kimght.LimbusScreenTranslator.data.network.LocalizationApi
+import com.kimght.LimbusScreenTranslator.data.repository.CatalogCache
 import com.kimght.LimbusScreenTranslator.data.repository.LocalizationRepository
 import com.kimght.LimbusScreenTranslator.data.repository.OverlayStateRepository
 import com.kimght.LimbusScreenTranslator.data.repository.ScenarioRepository
 import com.kimght.LimbusScreenTranslator.data.repository.SourceRepository
+import com.kimght.LimbusScreenTranslator.domain.model.DialogueLine
+import com.kimght.LimbusScreenTranslator.domain.model.InstalledPack
+import com.kimght.LimbusScreenTranslator.domain.model.PackKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -28,6 +35,7 @@ import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -85,6 +93,7 @@ class OverlayControllerTest {
             contentWriter = writer,
             scenarios = scenarios,
             sources = SourceRepository(db.sourceDao(), settings),
+            catalogCache = CatalogCache(),
         )
         overlayState = OverlayStateRepository(db.overlayStateDao(), clock = { 42L })
     }
@@ -243,6 +252,59 @@ class OverlayControllerTest {
             controller.updateResizeDraft(40f, 0f)
             val grown = awaitFirst(limit = 20) { it.overlayWidth == 440 && it.resizing }
             assertTrue("Expected the draft to survive re-selecting RESIZE", grown != null)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    private suspend fun seedActivePackWithChapters() {
+        RoomPackContentWriter(db).replacePack(
+            InstalledPack(
+                id = "ru-mtl",
+                version = "v1",
+                sourceName = "Github",
+                installedAt = 1L,
+                name = "MTL",
+                flag = "RU",
+                description = "",
+            ),
+            sequenceOf(
+                ScenarioContent(
+                    code = "7-1",
+                    lines = listOf(
+                        DialogueLine(index = 0, speakerName = null, title = null, place = null, text = "hi"),
+                    ),
+                ),
+            ),
+        )
+        db.chapterDao().insertChapters(
+            listOf(ChapterEntity(sourceName = "Github", position = 0, name = "CANTO VII", subtitle = "s")),
+        )
+        db.chapterDao().insertEpisodes(
+            listOf(
+                ChapterEpisodeEntity(sourceName = "Github", chapterPosition = 0, position = 0, episodeCode = "7-1"),
+            ),
+        )
+        settings.setActiveLocalizationId(PackKey.of("Github", "ru-mtl"))
+    }
+
+    @Test
+    fun `resize frames reuse the chapter model instead of rebuilding it`() = runTest {
+        seedActivePackWithChapters()
+        val controller = OverlayController(settings, localizations, scenarios, overlayState, backgroundScope)
+        controller.uiState.test {
+            controller.selectMode(OverlayMode.RESIZE)
+            val before = awaitFirst { it.resizing && it.chapters.isNotEmpty() }
+            assertTrue("Expected resizing state with chapters", before != null)
+
+            controller.updateResizeDraft(40f, 0f)
+            val after = awaitFirst(limit = 20) { it.overlayWidth == 400 }
+            assertTrue("Expected width 400 after drag", after != null)
+
+            assertSame(
+                "resize-drag frames must not rebuild the chapter rows",
+                before!!.chapters,
+                after!!.chapters,
+            )
             cancelAndIgnoreRemainingEvents()
         }
     }

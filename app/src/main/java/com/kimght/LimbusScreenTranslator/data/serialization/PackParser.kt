@@ -8,7 +8,7 @@ import kotlinx.serialization.json.Json
 
 object PackParser {
 
-    private const val BOM = '﻿'
+    private const val BOM = '\uFEFF'
 
     val json: Json = Json {
         ignoreUnknownKeys = true

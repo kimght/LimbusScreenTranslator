@@ -31,7 +31,6 @@ class PackInstallerTest {
         cacheRoot.deleteRecursively()
     }
 
-    /** The pipeline deletes its per-pack work dir on completion, so nothing should linger. */
     private fun assertNoWorkDirLeftovers() {
         val installDir = File(cacheRoot, "install")
         assertTrue(installDir.listFiles()?.isEmpty() ?: true)
@@ -55,13 +54,21 @@ class PackInstallerTest {
         var saved: InstalledPack? = null
         var scenarios: List<ScenarioContent> = emptyList()
         var deleted: String? = null
-        override suspend fun replacePack(pack: InstalledPack, scenarios: List<ScenarioContent>) {
+        override suspend fun replacePack(pack: InstalledPack, scenarios: Sequence<ScenarioContent>) {
+            this.scenarios = scenarios.toList()
             saved = pack
-            this.scenarios = scenarios
         }
         override suspend fun deletePack(id: String) {
             deleted = id
         }
+    }
+
+    private class ThrowingWriter : PackContentWriter {
+        override suspend fun replacePack(pack: InstalledPack, scenarios: Sequence<ScenarioContent>) {
+            scenarios.toList()
+            throw RuntimeException("disk full")
+        }
+        override suspend fun deletePack(id: String) = Unit
     }
 
     private fun localization(format: PackFormat = PackFormat.AUTO, size: Long) = Localization(
@@ -203,6 +210,55 @@ class PackInstallerTest {
             workDirName("My-pack", "x"),
             workDirName("My", "pack-x"),
         )
+    }
+
+    @Test
+    fun `corrupt archive fails with EXTRACTION_FAILED`() = runTest {
+        val writer = RecordingWriter()
+        val installer = PackInstaller(
+            downloader = FakeDownloader("this is not a zip".toByteArray()),
+            writer = writer,
+            cacheRoot = cacheRoot,
+            ioDispatcher = kotlinx.coroutines.Dispatchers.Unconfined,
+        )
+
+        val states = installer.install(localization(size = 17), "Github").toList()
+
+        assertEquals(InstallState.Failed(InstallError.EXTRACTION_FAILED), states.last())
+        assertNull(writer.saved)
+        assertNoWorkDirLeftovers()
+    }
+
+    @Test
+    fun `malformed scenario fails with PARSE_FAILED, not PERSIST_FAILED`() = runTest {
+        val badZip = TestZip.bytes(listOf("MyLang/StoryData/S001B.json" to "{ not json"))
+        val writer = RecordingWriter()
+        val installer = PackInstaller(
+            downloader = FakeDownloader(badZip),
+            writer = writer,
+            cacheRoot = cacheRoot,
+            ioDispatcher = kotlinx.coroutines.Dispatchers.Unconfined,
+        )
+
+        val states = installer.install(localization(size = badZip.size.toLong()), "Github").toList()
+
+        assertEquals(InstallState.Failed(InstallError.PARSE_FAILED), states.last())
+        assertNoWorkDirLeftovers()
+    }
+
+    @Test
+    fun `writer failure is reported as PERSIST_FAILED`() = runTest {
+        val installer = PackInstaller(
+            downloader = FakeDownloader(validZip),
+            writer = ThrowingWriter(),
+            cacheRoot = cacheRoot,
+            ioDispatcher = kotlinx.coroutines.Dispatchers.Unconfined,
+        )
+
+        val states = installer.install(localization(size = validZip.size.toLong()), "Github").toList()
+
+        assertEquals(InstallState.Failed(InstallError.PERSIST_FAILED), states.last())
+        assertNoWorkDirLeftovers()
     }
 
     @Test

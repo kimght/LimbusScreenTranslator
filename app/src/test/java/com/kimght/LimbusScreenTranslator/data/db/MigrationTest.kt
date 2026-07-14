@@ -3,6 +3,7 @@ package com.kimght.LimbusScreenTranslator.data.db
 import androidx.room.testing.MigrationTestHelper
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -70,6 +71,30 @@ class MigrationTest {
         ).use { c ->
             assertTrue("episode_progress row not rewritten", c.moveToFirst())
             assertEquals(5L, c.getLong(0))
+        }
+    }
+
+    @Test
+    fun `2 to 3 drops the redundant scenario_line index and keeps data`() {
+        helper.createDatabase(DB, 2).apply {
+            execSQL(
+                "INSERT INTO scenario_line (localizationId, scenarioCode, lineIndex, content, speakerName, title, place) " +
+                    "VALUES ('Githubru-mtl', 'S001B', 0, 'line', NULL, NULL, NULL)",
+            )
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(DB, 3, true, MIGRATION_2_3)
+
+        db.query(
+            "SELECT name FROM sqlite_master WHERE type = 'index' " +
+                "AND name = 'index_scenario_line_localizationId_scenarioCode'",
+        ).use { c ->
+            assertFalse("redundant index should be dropped", c.moveToFirst())
+        }
+        db.query("SELECT content FROM scenario_line WHERE scenarioCode = 'S001B'").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals("line", c.getString(0))
         }
     }
 

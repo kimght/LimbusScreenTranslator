@@ -73,6 +73,7 @@ class LocalizationRepositoryTest {
     }
 
     private lateinit var installManager: InstallManager
+    private var nowMs = 0L
 
     @Before
     fun setUp() {
@@ -110,6 +111,7 @@ class LocalizationRepositoryTest {
             contentWriter = writer,
             scenarios = scenarios,
             sources = sources,
+            catalogCache = CatalogCache(now = { nowMs }),
         )
     }
 
@@ -201,6 +203,53 @@ class LocalizationRepositoryTest {
 
         val catalog = repo.fetchCatalog(server.url("/localizations.json").toString())
 
+        assertEquals(listOf("ru-mtl"), catalog.localizations.map { it.id })
+    }
+
+    @Test
+    fun `fetchCatalog serves a fresh catalog from cache without re-downloading`() = runTest {
+        server.enqueue(
+            MockResponse().setBody("""{"localizations":[{"id":"ru-mtl","version":"v1"}]}"""),
+        )
+        val url = server.url("/localizations.json").toString()
+
+        val first = repo.fetchCatalog(url)
+        val second = repo.fetchCatalog(url)
+
+        assertEquals(1, server.requestCount)
+        assertEquals(first, second)
+    }
+
+    @Test
+    fun `fetchCatalog refetches once the cache entry expires`() = runTest {
+        server.enqueue(
+            MockResponse().setBody("""{"localizations":[{"id":"ru-mtl","version":"v1"}]}"""),
+        )
+        server.enqueue(
+            MockResponse().setBody("""{"localizations":[{"id":"ru-mtl","version":"v2"}]}"""),
+        )
+        val url = server.url("/localizations.json").toString()
+
+        repo.fetchCatalog(url)
+        nowMs += CatalogCache.TTL_MS + 1
+        val catalog = repo.fetchCatalog(url)
+
+        assertEquals(2, server.requestCount)
+        assertEquals("v2", catalog.localizations.single().version)
+    }
+
+    @Test
+    fun `fetchCatalog does not cache failures`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(500))
+        server.enqueue(
+            MockResponse().setBody("""{"localizations":[{"id":"ru-mtl","version":"v1"}]}"""),
+        )
+        val url = server.url("/localizations.json").toString()
+
+        assertTrue(runCatching { repo.fetchCatalog(url) }.isFailure)
+        val catalog = repo.fetchCatalog(url)
+
+        assertEquals(2, server.requestCount)
         assertEquals(listOf("ru-mtl"), catalog.localizations.map { it.id })
     }
 

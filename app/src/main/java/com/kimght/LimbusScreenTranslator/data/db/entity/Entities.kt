@@ -25,7 +25,6 @@ data class SourceEntity(
 @Entity(
     tableName = "scenario_line",
     primaryKeys = ["localizationId", "scenarioCode", "lineIndex"],
-    indices = [Index(value = ["localizationId", "scenarioCode"])],
 )
 data class ScenarioLineEntity(
     val localizationId: String,

@@ -36,3 +36,11 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
         db.execSQL("ALTER TABLE installed_pack_new RENAME TO `installed_pack`")
     }
 }
+
+// (localizationId, scenarioCode) is a strict prefix of the primary key, so the PK's
+// index already serves every query this one could.
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("DROP INDEX IF EXISTS `index_scenario_line_localizationId_scenarioCode`")
+    }
+}

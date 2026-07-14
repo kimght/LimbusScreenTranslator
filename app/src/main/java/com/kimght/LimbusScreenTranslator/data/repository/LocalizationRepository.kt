@@ -43,6 +43,7 @@ class LocalizationRepository @Inject constructor(
     private val contentWriter: PackContentWriter,
     private val scenarios: ScenarioRepository,
     private val sources: SourceRepository,
+    private val catalogCache: CatalogCache,
 ) {
     val installedPacks: Flow<List<InstalledPack>> =
         installedPackDao.observeAll().map { list ->
@@ -66,13 +67,14 @@ class LocalizationRepository @Inject constructor(
     fun installState(id: String): InstallState = installManager.stateFor(id)
 
     suspend fun fetchCatalog(manifestUrl: String): Catalog {
+        catalogCache.get(manifestUrl)?.let { return it }
         val manifest = api.getManifest(manifestUrl)
         return Catalog(
             localizations = manifest.localizations
                 .filter { it.id.isNotBlank() }
                 .map { it.toDomain() },
             chaptersUrl = manifest.chaptersUrl,
-        )
+        ).also { catalogCache.put(manifestUrl, it) }
     }
 
     fun listings(catalog: List<Localization>, sourceName: String): Flow<List<LocalizationListing>> =
@@ -128,8 +130,6 @@ class LocalizationRepository @Inject constructor(
 
     suspend fun uninstall(key: String) {
         installManager.cancel(key)
-        // Clear the active reference before deleting so process death mid-uninstall
-        // can never leave the active id pointing at an already-deleted pack.
         if (settings.settings.first().activeLocalizationId == key) {
             settings.setActiveLocalizationId(null)
         }
@@ -153,10 +153,6 @@ class LocalizationRepository @Inject constructor(
         settings.setActiveLocalizationId(null)
     }
 
-    /**
-     * Removing a source uninstalls everything installed from it. Owning both writes in one
-     * operation keeps the cascade from depending on call-site ordering.
-     */
     suspend fun removeSourceWithPacks(sourceName: String) {
         uninstallBySource(sourceName)
         sources.removeSource(sourceName)
