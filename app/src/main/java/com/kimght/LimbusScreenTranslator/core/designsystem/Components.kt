@@ -1,5 +1,6 @@
 package com.kimght.LimbusScreenTranslator.core.designsystem
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,12 +24,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.kimght.LimbusScreenTranslator.ui.theme.Hairline
 import com.kimght.LimbusScreenTranslator.ui.theme.Limbus300
 import com.kimght.LimbusScreenTranslator.ui.theme.Limbus500
@@ -68,6 +72,27 @@ fun SectionLabel(
     }
 }
 
+private object FlagAssets {
+    private const val DIR = "flags"
+
+    @Volatile
+    private var available: Set<String>? = null
+
+    fun contains(context: Context, code: String): Boolean {
+        val flags = available ?: synchronized(this) {
+            available ?: context.assets.list(DIR)
+                .orEmpty()
+                .filter { it.endsWith(".webp") }
+                .map { it.removeSuffix(".webp") }
+                .toSet()
+                .also { available = it }
+        }
+        return code in flags
+    }
+
+    fun uri(code: String): String = "file:///android_asset/$DIR/$code.webp"
+}
+
 @Composable
 fun FlagChip(
     flag: String,
@@ -76,26 +101,32 @@ fun FlagChip(
     height: Dp = 34.dp,
     fontSize: TextUnit = 12.sp,
 ) {
+    val context = LocalContext.current
+    val code = flag.trim().substringBeforeLast(".").uppercase()
+    val hasImage = remember(code) { FlagAssets.contains(context, code) }
+    val shape = RoundedCornerShape(3.dp)
     Box(
         modifier = modifier
             .size(width, height)
-            .clip(RoundedCornerShape(3.dp))
-            .background(
-                Brush.linearGradient(
-                    0.0f to Limbus300.copy(alpha = 0.10f),
-                    1.0f to Limbus300.copy(alpha = 0.03f),
-                ),
-            )
-            .border(1.dp, Hairline, RoundedCornerShape(3.dp)),
+            .clip(shape),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = flag,
-            color = Limbus300,
-            fontFamily = MonoFontFamily,
-            fontSize = fontSize,
-            maxLines = 1,
-        )
+        if (hasImage) {
+            AsyncImage(
+                model = FlagAssets.uri(code),
+                contentDescription = flag,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize(),
+            )
+        } else {
+            Text(
+                text = flag,
+                color = Limbus300,
+                fontFamily = MonoFontFamily,
+                fontSize = fontSize,
+                maxLines = 1,
+            )
+        }
     }
 }
 
