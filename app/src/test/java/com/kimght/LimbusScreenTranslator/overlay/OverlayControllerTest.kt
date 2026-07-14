@@ -180,6 +180,23 @@ class OverlayControllerTest {
     }
 
     @Test
+    fun `sub-dp resize deltas accumulate instead of being truncated`() = runTest {
+        val controller = OverlayController(settings, localizations, scenarios, overlayState, backgroundScope)
+        controller.uiState.test {
+            controller.selectMode(OverlayMode.RESIZE)
+            assertTrue("Expected resizing=true", awaitFirst { it.resizing } != null)
+
+            repeat(10) { controller.updateResizeDraft(0.5f, 0.25f) }
+
+            val grown = awaitFirst(limit = 30) {
+                it.overlayWidth == 365 && it.overlayContentHeight == 153
+            }
+            assertTrue("Expected 10×(0.5, 0.25)dp drags to grow 360×150 to 365×153", grown != null)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `minimize commits an in-progress resize`() = runTest {
         val controller = OverlayController(settings, localizations, scenarios, overlayState, backgroundScope)
         controller.uiState.test {

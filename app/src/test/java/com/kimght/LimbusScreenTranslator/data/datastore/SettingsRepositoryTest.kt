@@ -82,6 +82,26 @@ class SettingsRepositoryTest {
     }
 
     @Test
+    fun `positions default to null until saved`() = runTest {
+        val s = repo.settings.first()
+        assertNull(s.panelX)
+        assertNull(s.panelY)
+        assertNull(s.minimizedX)
+        assertNull(s.minimizedY)
+    }
+
+    @Test
+    fun `a saved top-left position is distinct from never-saved`() = runTest {
+        repo.setPanelPosition(0, 0)
+        repo.setMinimizedPosition(0, 0)
+        val s = repo.settings.first()
+        assertEquals(0, s.panelX)
+        assertEquals(0, s.panelY)
+        assertEquals(0, s.minimizedX)
+        assertEquals(0, s.minimizedY)
+    }
+
+    @Test
     fun `overlay size is clamped to its allowed range`() = runTest {
         repo.setOverlaySize(9999, 9999)
         repo.settings.first().let {
@@ -128,10 +148,10 @@ class SettingsRepositoryTest {
         assertEquals(Settings.DEFAULT_OPACITY, s.opacity)
         assertEquals(Settings.DEFAULT_TEXT_SIZE, s.textSize)
         assertEquals(Settings.defaultUiLanguage(), s.uiLanguage)
-        assertEquals(0, s.panelX)
-        assertEquals(0, s.panelY)
-        assertEquals(0, s.minimizedX)
-        assertEquals(0, s.minimizedY)
+        assertNull(s.panelX)
+        assertNull(s.panelY)
+        assertNull(s.minimizedX)
+        assertNull(s.minimizedY)
         assertEquals(Settings.DEFAULT_OVERLAY_WIDTH, s.overlayWidth)
         assertEquals(Settings.DEFAULT_OVERLAY_CONTENT_HEIGHT, s.overlayContentHeight)
         assertNull(s.activeLocalizationId)

@@ -726,6 +726,9 @@ private fun MinimizedIcon(state: OverlayUiState, actions: OverlayActions) {
             delay(ROTATE_HINT_MILLIS.milliseconds)
             showRotateHint = false
         }
+        // Consume the tap; otherwise every later landscape→portrait
+        // transition would replay the hint (the ComposeView survives rotation).
+        hintNonce = 0
     }
     val active = !state.portrait
     Box(Modifier.padding(6.dp)) {

@@ -201,17 +201,13 @@ class OverlayService : Service() {
     private fun applyPositionForState() {
         scope.launch {
             val prefs = settings.settings.first()
-            if (minimizedNow) {
-                layoutParams.x = prefs.minimizedX
-                layoutParams.y = prefs.minimizedY
-                if (prefs.minimizedX == 0 && prefs.minimizedY == 0) defaultPlacement()
+            val x = if (minimizedNow) prefs.minimizedX else prefs.panelX
+            val y = if (minimizedNow) prefs.minimizedY else prefs.panelY
+            if (x != null && y != null) {
+                layoutParams.x = x
+                layoutParams.y = y
             } else {
-                if (prefs.panelX != 0 || prefs.panelY != 0) {
-                    layoutParams.x = prefs.panelX
-                    layoutParams.y = prefs.panelY
-                } else {
-                    defaultPlacement()
-                }
+                defaultPlacement()
             }
             clampNow()
             composeView?.let { runCatching { windowManager.updateViewLayout(it, layoutParams) } }
@@ -231,10 +227,6 @@ class OverlayService : Service() {
         controllerRef?.setOrientation(
             newConfig.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT,
         )
-        // Keep the window on-screen for the new orientation, but do NOT persist this
-        // reclamp: the saved slots are per-orientation and are reapplied by the uiState
-        // collector when minimized flips. Persisting here would clobber them with a
-        // transient, orientation-clamped position.
         composeView?.post {
             clampNow()
             composeView?.let { runCatching { windowManager.updateViewLayout(it, layoutParams) } }

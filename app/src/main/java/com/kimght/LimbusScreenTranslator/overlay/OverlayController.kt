@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class OverlayController(
@@ -36,6 +37,8 @@ class OverlayController(
     private val mode = MutableStateFlow(OverlayMode.DIALOGUE)
     private val minimized = MutableStateFlow(false)
     private val resizeDraft = MutableStateFlow<OverlaySize?>(null)
+    private var draftWidthDp = 0f
+    private var draftHeightDp = 0f
     private val expandedChapter = MutableStateFlow<String?>(null)
     private val isPortrait = MutableStateFlow(false)
 
@@ -88,8 +91,6 @@ class OverlayController(
                 portrait = portrait,
                 opacity = prefs.opacity,
                 textScale = prefs.textSize,
-                panelX = prefs.panelX,
-                panelY = prefs.panelY,
                 overlayWidth = width,
                 overlayContentHeight = contentHeight,
             )
@@ -105,8 +106,6 @@ class OverlayController(
                 portrait = portrait,
                 opacity = prefs.opacity,
                 textScale = prefs.textSize,
-                panelX = prefs.panelX,
-                panelY = prefs.panelY,
                 overlayWidth = width,
                 overlayContentHeight = contentHeight,
                 episodeKey = reading.currentEpisode,
@@ -134,7 +133,7 @@ class OverlayController(
         if (target == OverlayMode.RESIZE) {
             scope.launch {
                 val prefs = settings.settings.first()
-                resizeDraft.value = OverlaySize(prefs.overlayWidth, prefs.overlayContentHeight)
+                startResizeDraft(prefs.overlayWidth, prefs.overlayContentHeight)
                 mode.value = OverlayMode.RESIZE
             }
         } else {
@@ -144,7 +143,6 @@ class OverlayController(
 
     fun minimize() {
         minimized.value = true
-        // Resize doesn't survive minimising: commit the draft and reopen in dialogue.
         if (mode.value == OverlayMode.RESIZE) leaveResizeTo(OverlayMode.DIALOGUE)
     }
 
@@ -161,13 +159,22 @@ class OverlayController(
     }
 
     fun updateResizeDraft(dWidthDp: Float, dHeightDp: Float) {
-        val cur = resizeDraft.value ?: return
-        resizeDraft.value = OverlaySize(
-            width = (cur.width + dWidthDp.toInt())
-                .coerceIn(Settings.MIN_OVERLAY_WIDTH, Settings.MAX_OVERLAY_WIDTH),
-            contentHeight = (cur.contentHeight + dHeightDp.toInt())
-                .coerceIn(Settings.MIN_OVERLAY_CONTENT_HEIGHT, Settings.MAX_OVERLAY_CONTENT_HEIGHT),
+        if (resizeDraft.value == null) return
+        draftWidthDp = (draftWidthDp + dWidthDp).coerceIn(
+            Settings.MIN_OVERLAY_WIDTH.toFloat(),
+            Settings.MAX_OVERLAY_WIDTH.toFloat(),
         )
+        draftHeightDp = (draftHeightDp + dHeightDp).coerceIn(
+            Settings.MIN_OVERLAY_CONTENT_HEIGHT.toFloat(),
+            Settings.MAX_OVERLAY_CONTENT_HEIGHT.toFloat(),
+        )
+        resizeDraft.value = OverlaySize(draftWidthDp.roundToInt(), draftHeightDp.roundToInt())
+    }
+
+    private fun startResizeDraft(width: Int, contentHeight: Int) {
+        draftWidthDp = width.toFloat()
+        draftHeightDp = contentHeight.toFloat()
+        resizeDraft.value = OverlaySize(width, contentHeight)
     }
 
     fun persistResizeDraft() {
@@ -188,8 +195,7 @@ class OverlayController(
     }
 
     fun resetSize() {
-        resizeDraft.value =
-            OverlaySize(Settings.DEFAULT_OVERLAY_WIDTH, Settings.DEFAULT_OVERLAY_CONTENT_HEIGHT)
+        startResizeDraft(Settings.DEFAULT_OVERLAY_WIDTH, Settings.DEFAULT_OVERLAY_CONTENT_HEIGHT)
         scope.launch {
             settings.setOverlaySize(
                 Settings.DEFAULT_OVERLAY_WIDTH,

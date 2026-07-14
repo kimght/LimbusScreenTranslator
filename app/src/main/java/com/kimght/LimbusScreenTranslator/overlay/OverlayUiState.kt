@@ -45,8 +45,6 @@ data class OverlayUiState(
     val portrait: Boolean = false,
     val opacity: Float = Settings.DEFAULT_OPACITY,
     val textScale: Float = Settings.DEFAULT_TEXT_SIZE,
-    val panelX: Int = 0,
-    val panelY: Int = 0,
     val episodeKey: String? = null,
     val lines: List<DialogueLine> = emptyList(),
     val lineIndex: Int = 0,
