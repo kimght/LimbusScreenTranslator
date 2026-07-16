@@ -1,5 +1,6 @@
 package com.kimght.LimbusScreenTranslator.feature.navigation
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
@@ -21,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,6 +38,7 @@ import com.composables.icons.lucide.House
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Map
 import com.composables.icons.lucide.Settings
+import com.kimght.LimbusScreenTranslator.R
 import com.kimght.LimbusScreenTranslator.feature.detail.DetailScreen
 import com.kimght.LimbusScreenTranslator.feature.home.HomeScreen
 import com.kimght.LimbusScreenTranslator.feature.library.LibraryScreen
@@ -55,7 +58,7 @@ internal object Routes {
         "detail/${android.net.Uri.encode(sourceName)}/${android.net.Uri.encode(id)}"
 }
 
-private data class TopDestination(val route: String, val label: String, val icon: ImageVector)
+private data class TopDestination(val route: String, @StringRes val label: Int, val icon: ImageVector)
 
 @Composable
 fun ManagerApp(
@@ -74,9 +77,9 @@ fun ManagerApp(
     }
 
     val topDestinations = listOf(
-        TopDestination(Routes.HOME, "Home", Lucide.House),
-        TopDestination(Routes.LIBRARY, "Library", Lucide.Map),
-        TopDestination(Routes.SETTINGS, "Settings", Lucide.Settings),
+        TopDestination(Routes.HOME, R.string.nav_home, Lucide.House),
+        TopDestination(Routes.LIBRARY, R.string.nav_library, Lucide.Map),
+        TopDestination(Routes.SETTINGS, R.string.nav_settings, Lucide.Settings),
     )
 
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -165,6 +168,7 @@ private fun BottomBar(
         destinations.forEach { destination ->
             val selected =
                 currentDestination?.hierarchy?.any { it.route == destination.route } == true
+            val label = stringResource(destination.label)
             NavigationBarItem(
                 selected = selected,
                 onClick = { onNavigate(destination.route) },
@@ -186,7 +190,7 @@ private fun BottomBar(
                         }
                         Icon(
                             imageVector = destination.icon,
-                            contentDescription = destination.label,
+                            contentDescription = label,
                             modifier = Modifier.size(22.dp),
                             tint = if (selected) Limbus300 else Limbus500,
                         )
@@ -194,7 +198,7 @@ private fun BottomBar(
                 },
                 label = {
                     Text(
-                        text = destination.label.uppercase(),
+                        text = label.uppercase(),
                         fontSize = 9.sp,
                         letterSpacing = 1.0.sp,
                         fontWeight = FontWeight.Medium,

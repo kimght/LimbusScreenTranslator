@@ -1,5 +1,6 @@
 package com.kimght.LimbusScreenTranslator.core.designsystem
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -14,10 +15,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kimght.LimbusScreenTranslator.R
 import com.kimght.LimbusScreenTranslator.domain.model.LocalizationStatus
 import com.kimght.LimbusScreenTranslator.ui.theme.Limbus200
 import com.kimght.LimbusScreenTranslator.ui.theme.Limbus300
@@ -51,7 +54,7 @@ fun StatusBadge(
             )
         }
         Text(
-            text = spec.label,
+            text = stringResource(spec.label),
             color = spec.foreground,
             fontFamily = MonoFontFamily,
             fontWeight = FontWeight.Medium,
@@ -64,7 +67,7 @@ fun StatusBadge(
 }
 
 private data class BadgeSpec(
-    val label: String,
+    @StringRes val label: Int,
     val foreground: Color,
     val background: Color,
     val border: Color,
@@ -73,28 +76,28 @@ private data class BadgeSpec(
 
 private fun LocalizationStatus.badgeSpec(): BadgeSpec = when (this) {
     LocalizationStatus.NOT_INSTALLED -> BadgeSpec(
-        label = "NOT INSTALLED",
+        label = R.string.badge_not_installed,
         foreground = Limbus500,
         background = Limbus50.copy(alpha = 0.03f),
         border = Limbus600.copy(alpha = 0.30f),
     )
 
     LocalizationStatus.INSTALLED -> BadgeSpec(
-        label = "INSTALLED",
+        label = R.string.badge_installed,
         foreground = Limbus200,
         background = Limbus300.copy(alpha = 0.06f),
         border = Limbus300.copy(alpha = 0.28f),
     )
 
     LocalizationStatus.ACTIVE -> BadgeSpec(
-        label = "ACTIVE",
+        label = R.string.badge_active,
         foreground = Limbus300,
         background = Limbus300.copy(alpha = 0.12f),
         border = Limbus300.copy(alpha = 0.50f),
     )
 
     LocalizationStatus.UPDATE_AVAILABLE -> BadgeSpec(
-        label = "UPDATE",
+        label = R.string.badge_update,
         foreground = Limbus400,
         background = Limbus400.copy(alpha = 0.12f),
         border = Limbus400.copy(alpha = 0.55f),
@@ -102,7 +105,7 @@ private fun LocalizationStatus.badgeSpec(): BadgeSpec = when (this) {
     )
 
     LocalizationStatus.INSTALLING -> BadgeSpec(
-        label = "INSTALLING",
+        label = R.string.badge_installing,
         foreground = Limbus300,
         background = Limbus300.copy(alpha = 0.10f),
         border = Limbus300.copy(alpha = 0.40f),

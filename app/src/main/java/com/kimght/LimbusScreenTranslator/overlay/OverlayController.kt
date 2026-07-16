@@ -124,7 +124,8 @@ class OverlayController(
                 chapters = model.rows,
                 prevEpisode = model.nav.prev,
                 nextEpisode = model.nav.next,
-                chapterContext = model.contextLabel,
+                totalEpisodes = model.totalEpisodes,
+                chapterSourceName = model.sourceName,
             )
         }
     }.stateIn(scope, SharingStarted.Eagerly, OverlayUiState())
@@ -140,7 +141,8 @@ class OverlayController(
     private data class ChapterModel(
         val rows: List<ChapterRow>,
         val nav: EpisodeNav,
-        val contextLabel: String,
+        val totalEpisodes: Int,
+        val sourceName: String?,
     )
 
     private var cachedChapterKey: ChapterKey? = null
@@ -152,10 +154,8 @@ class OverlayController(
         return ChapterModel(
             rows = buildChapterRows(key.chapters, key.currentEpisode, key.viewed, expanded),
             nav = episodeNav(key.chapters, key.currentEpisode),
-            contextLabel = chapterContextLabel(
-                key.chapters.sumOf { it.episodes.size },
-                key.sourceName,
-            ),
+            totalEpisodes = key.chapters.sumOf { it.episodes.size },
+            sourceName = key.sourceName,
         ).also {
             cachedChapterKey = key
             cachedChapterModel = it

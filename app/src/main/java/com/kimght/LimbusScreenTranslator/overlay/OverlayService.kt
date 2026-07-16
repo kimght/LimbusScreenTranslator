@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.Point
@@ -12,11 +13,17 @@ import android.os.Build
 import android.os.IBinder
 import android.provider.Settings
 import android.view.WindowManager
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kimght.LimbusScreenTranslator.MainActivity
 import com.kimght.LimbusScreenTranslator.R
+import com.kimght.LimbusScreenTranslator.core.i18n.ProvideUiLanguage
+import com.kimght.LimbusScreenTranslator.core.i18n.localizedTo
+import com.kimght.LimbusScreenTranslator.data.datastore.Settings as AppSettings
 import com.kimght.LimbusScreenTranslator.data.datastore.SettingsRepository
 import com.kimght.LimbusScreenTranslator.data.repository.LocalizationRepository
 import com.kimght.LimbusScreenTranslator.data.repository.OverlayStateRepository
@@ -30,7 +37,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.math.roundToInt
@@ -76,6 +85,14 @@ class OverlayService : Service() {
         controllerRef = controller
         controller.setOrientation(isPortrait())
         addOverlayView(controller)
+        scope.launch {
+            settings.settings.map { it.uiLanguage }.distinctUntilChanged().collect { lang ->
+                val localized = localizedTo(lang)
+                ensureChannel(localized)
+                getSystemService(NotificationManager::class.java)
+                    .notify(NOTIFICATION_ID, buildNotification(localized))
+            }
+        }
         scope.launch {
             var lastMinimized: Boolean? = null
             var lastWidth = -1
@@ -132,8 +149,16 @@ class OverlayService : Service() {
         val view = ComposeView(this).apply {
             host.attachTo(this)
             setContent {
+                val languageFlow = remember {
+                    settings.settings
+                        .map { it.uiLanguage }
+                        .distinctUntilChanged()
+                }
+                val language by languageFlow.collectAsStateWithLifecycle(initialValue = AppSettings.defaultUiLanguage())
                 LimbusScreenTranslatorTheme {
-                    OverlayRoot(stateFlow = controller.uiState, actions = actions)
+                    ProvideUiLanguage(language) {
+                        OverlayRoot(stateFlow = controller.uiState, actions = actions)
+                    }
                 }
             }
         }
@@ -234,38 +259,41 @@ class OverlayService : Service() {
     }
 
     private fun startForegroundNotification() {
-        val manager = getSystemService(NotificationManager::class.java)
+        ensureChannel(this)
+        val type = if (Build.VERSION.SDK_INT >= 34) {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+        } else {
+            0
+        }
+        ServiceCompat.startForeground(this, NOTIFICATION_ID, buildNotification(this), type)
+    }
+
+    private fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                getString(R.string.overlay_notification_channel),
+                context.getString(R.string.overlay_notification_channel),
                 NotificationManager.IMPORTANCE_LOW,
             ).apply { setShowBadge(false) }
-            manager.createNotificationChannel(channel)
+            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
+    }
 
+    private fun buildNotification(context: Context): Notification {
         val contentIntent = PendingIntent.getActivity(
             this,
             0,
             Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             PendingIntent.FLAG_IMMUTABLE,
         )
-
-        val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
+        return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle(getString(R.string.overlay_notification_title))
-            .setContentText(getString(R.string.overlay_notification_text))
+            .setContentTitle(context.getString(R.string.overlay_notification_title))
+            .setContentText(context.getString(R.string.overlay_notification_text))
             .setContentIntent(contentIntent)
             .setOngoing(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .build()
-
-        val type = if (Build.VERSION.SDK_INT >= 34) {
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-        } else {
-            0
-        }
-        ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, type)
     }
 
     companion object {

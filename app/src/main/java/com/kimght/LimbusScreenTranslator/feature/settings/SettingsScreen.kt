@@ -35,6 +35,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,6 +46,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.X
+import com.kimght.LimbusScreenTranslator.R
 import com.kimght.LimbusScreenTranslator.core.designsystem.ConfirmDialog
 import com.kimght.LimbusScreenTranslator.core.designsystem.SectionLabel
 import com.kimght.LimbusScreenTranslator.core.designsystem.clickableEnabled
@@ -69,8 +72,11 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    androidx.compose.runtime.LaunchedEffect(viewModel) {
-        viewModel.messages.collect { onMessage(it) }
+    val resources = LocalResources.current
+    androidx.compose.runtime.LaunchedEffect(viewModel, resources) {
+        viewModel.messages.collect { msg ->
+            onMessage(resources.getString(msg.id, *msg.args.toTypedArray()))
+        }
     }
     SettingsContent(
         state = state,
@@ -100,17 +106,17 @@ private fun SettingsContent(
             .padding(horizontal = 20.dp)
             .padding(top = 14.dp, bottom = 28.dp),
     ) {
-        SectionLabel("Overlay")
+        SectionLabel(stringResource(R.string.settings_overlay))
         Spacer(Modifier.size(12.dp))
         OpacityCard(percent = state.opacityPercent, opacity = state.opacity, onOpacity = onOpacity)
 
         Spacer(Modifier.size(20.dp))
-        SectionLabel("Interface language")
+        SectionLabel(stringResource(R.string.settings_interface_language))
         Spacer(Modifier.size(10.dp))
         LanguageGrid(selected = state.uiLanguage, onSelect = onUiLanguage)
 
         Spacer(Modifier.size(20.dp))
-        SectionLabel("Localization sources")
+        SectionLabel(stringResource(R.string.settings_sources))
         Spacer(Modifier.size(10.dp))
         SourceManager(
             sources = state.sources,
@@ -119,7 +125,7 @@ private fun SettingsContent(
         )
 
         Spacer(Modifier.size(20.dp))
-        SectionLabel("Reset")
+        SectionLabel(stringResource(R.string.settings_reset_section))
         Spacer(Modifier.size(10.dp))
         var confirmingReset by remember { mutableStateOf(false) }
         Box(
@@ -133,7 +139,7 @@ private fun SettingsContent(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = "RESET TO DEFAULTS",
+                text = stringResource(R.string.settings_reset_to_defaults),
                 color = DangerBright,
                 fontFamily = MonoFontFamily,
                 fontSize = 12.sp,
@@ -142,10 +148,9 @@ private fun SettingsContent(
         }
         if (confirmingReset) {
             ConfirmDialog(
-                title = "Reset everything?",
-                message = "All settings return to defaults, custom sources are removed, " +
-                        "and all installed localizations are uninstalled along with reading progress.",
-                confirmLabel = "RESET",
+                title = stringResource(R.string.settings_reset_title),
+                message = stringResource(R.string.settings_reset_message),
+                confirmLabel = stringResource(R.string.settings_reset_confirm),
                 onConfirm = {
                     onResetEverything()
                     confirmingReset = false
@@ -172,7 +177,7 @@ private fun OpacityCard(percent: Int, opacity: Float, onOpacity: (Int) -> Unit) 
             verticalAlignment = Alignment.Bottom,
         ) {
             Text(
-                text = "BACKGROUND OPACITY",
+                text = stringResource(R.string.settings_background_opacity),
                 color = Limbus200,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 13.sp,
@@ -206,7 +211,7 @@ private fun OpacityCard(percent: Int, opacity: Float, onOpacity: (Int) -> Unit) 
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = "PREVIEW",
+                text = stringResource(R.string.settings_preview),
                 color = Limbus600,
                 fontFamily = MonoFontFamily,
                 fontSize = 8.sp,
@@ -222,14 +227,14 @@ private fun OpacityCard(percent: Int, opacity: Float, onOpacity: (Int) -> Unit) 
                     .padding(horizontal = 13.dp, vertical = 8.dp),
             ) {
                 Text(
-                    text = "DANTE",
+                    text = stringResource(R.string.settings_preview_speaker),
                     color = Limbus300,
                     fontWeight = FontWeight.Bold,
                     fontSize = 10.sp,
                     letterSpacing = 0.6.sp,
                 )
                 Text(
-                    text = "Lorem ipsum dolor sit amet consectetur adipiscing elit.",
+                    text = stringResource(R.string.settings_preview_line),
                     color = Limbus100,
                     fontSize = 11.sp,
                     lineHeight = 15.sp,
@@ -354,12 +359,12 @@ private fun SourceManager(
                 SourceInput(
                     value = newName,
                     onValueChange = { newName = it },
-                    placeholder = "Source name"
+                    placeholder = stringResource(R.string.settings_source_name_placeholder)
                 )
                 SourceInput(
                     value = newHost,
                     onValueChange = { newHost = it },
-                    placeholder = "Host or URL (optional)",
+                    placeholder = stringResource(R.string.settings_source_host_placeholder),
                     mono = true,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -379,7 +384,7 @@ private fun SourceManager(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "ADD SOURCE",
+                            text = stringResource(R.string.settings_add_source),
                             color = Limbus300,
                             fontFamily = MonoFontFamily,
                             fontSize = 12.sp,
@@ -400,7 +405,7 @@ private fun SourceManager(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "CANCEL",
+                            text = stringResource(R.string.common_cancel),
                             color = Limbus500,
                             fontFamily = MonoFontFamily,
                             fontSize = 12.sp,
@@ -420,7 +425,7 @@ private fun SourceManager(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "+ ADD SOURCE",
+                    text = stringResource(R.string.settings_add_source_button),
                     color = Limbus500,
                     fontFamily = MonoFontFamily,
                     fontSize = 12.sp,
@@ -431,10 +436,9 @@ private fun SourceManager(
 
         pendingRemoval?.let { name ->
             ConfirmDialog(
-                title = "Remove source · $name?",
-                message = "Its manifest URL will be forgotten, and localizations installed " +
-                        "from it will be uninstalled along with their reading progress.",
-                confirmLabel = "REMOVE",
+                title = stringResource(R.string.settings_remove_source_title, name),
+                message = stringResource(R.string.settings_remove_source_message),
+                confirmLabel = stringResource(R.string.settings_remove),
                 onConfirm = {
                     onRemove(name)
                     pendingRemoval = null

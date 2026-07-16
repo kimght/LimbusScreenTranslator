@@ -1,0 +1,111 @@
+<resources>
+    <!-- Overlay foreground service -->
+    <string name="overlay_notification_channel">Плавающее окно перевода</string>
+    <string name="overlay_notification_title">Плавающее окно активно</string>
+    <string name="overlay_notification_text">Нажмите, чтобы открыть Limbus Screen Translator</string>
+    <string name="overlay_permission_required">Разрешите отображение поверх других приложений, чтобы использовать плавающее окно</string>
+
+    <!-- Common -->
+    <string name="common_cancel">ОТМЕНА</string>
+
+    <!-- Bottom navigation -->
+    <string name="nav_home">Главная</string>
+    <string name="nav_library">Библиотека</string>
+    <string name="nav_settings">Настройки</string>
+
+    <!-- Home -->
+    <string name="home_active_localization">Активная локализация</string>
+    <string name="home_close_overlay">Закрыть переводчик</string>
+    <string name="home_installing">Установка…</string>
+    <string name="home_update_open_overlay">Обновить и открыть переводчик</string>
+    <string name="home_open_overlay">Открыть переводчик</string>
+    <string name="home_manage_localization">Управление локализацией</string>
+    <string name="home_whats_new">Что нового</string>
+    <string name="home_description">Описание</string>
+    <string name="home_update_badge">ОБНОВЛЕНИЕ</string>
+    <string name="home_version_via_source">%1$s · из %2$s</string>
+    <string name="home_empty">Нет активной локализации.\nУстановите её и сделайте активной.</string>
+    <string name="home_browse_library">Открыть библиотеку</string>
+
+    <!-- Library -->
+    <string name="library_source">Источник</string>
+    <string name="library_localizations">Локализации · %1$s</string>
+    <string name="library_loading">Загрузка…</string>
+    <string name="library_no_sources_selector">Нет источников</string>
+    <string name="library_error">Не удалось подключиться к источнику.</string>
+    <string name="library_retry">Повторить</string>
+    <string name="library_empty">Источники локализаций не настроены.\nДобавьте их в настройках.</string>
+    <string name="library_open_settings">Открыть настройки</string>
+    <string name="library_install">Установить</string>
+    <string name="library_update">Обновить</string>
+
+    <!-- Detail -->
+    <string name="detail_back">Назад</string>
+    <string name="detail_library">БИБЛИОТЕКА</string>
+    <string name="detail_not_found">Эта локализация больше недоступна в её источнике.</string>
+    <string name="detail_loading">Загрузка…</string>
+    <string name="detail_by_authors">Авторы: %1$s</string>
+    <string name="detail_version">Версия</string>
+    <string name="detail_size">Размер</string>
+    <string name="detail_install">Установить</string>
+    <string name="detail_update_now">Обновить сейчас</string>
+    <string name="detail_set_active">Сделать активной</string>
+    <string name="detail_uninstall">УДАЛИТЬ</string>
+    <string name="detail_changelog">История изменений</string>
+
+    <!-- Install stages -->
+    <string name="install_stage_installing">УСТАНОВКА</string>
+    <string name="install_stage_downloading">УСТАНОВКА · ЗАГРУЗКА</string>
+    <string name="install_stage_verifying">УСТАНОВКА · ПРОВЕРКА ZIP</string>
+    <string name="install_stage_extracting">УСТАНОВКА · РАСПАКОВКА</string>
+    <string name="install_stage_saving">УСТАНОВКА · СОХРАНЕНИЕ</string>
+
+    <!-- Status badges -->
+    <string name="badge_not_installed">НЕ УСТАНОВЛЕНА</string>
+    <string name="badge_installed">УСТАНОВЛЕНА</string>
+    <string name="badge_active">АКТИВНА</string>
+    <string name="badge_update">ОБНОВЛЕНИЕ</string>
+    <string name="badge_installing">УСТАНОВКА</string>
+
+    <!-- Settings -->
+    <string name="settings_overlay">Оверлей</string>
+    <string name="settings_background_opacity">НЕПРОЗРАЧНОСТЬ ФОНА</string>
+    <string name="settings_preview">ПРЕДПРОСМОТР</string>
+    <string name="settings_preview_speaker">ДАНТЕ</string>
+    <string name="settings_preview_line">Съешь ещё этих мягких французских булок, да выпей же чаю.</string>
+    <string name="settings_interface_language">Язык интерфейса</string>
+    <string name="settings_sources">Источники локализаций</string>
+    <string name="settings_source_name_placeholder">Название источника</string>
+    <string name="settings_source_host_placeholder">Хост или URL (необязательно)</string>
+    <string name="settings_add_source">ДОБАВИТЬ ИСТОЧНИК</string>
+    <string name="settings_add_source_button">+ ДОБАВИТЬ ИСТОЧНИК</string>
+    <string name="settings_remove_source_title">Удалить источник · %1$s?</string>
+    <string name="settings_remove_source_message">URL его манифеста будет забыт, а установленные из него локализации будут удалены вместе с прогрессом чтения.</string>
+    <string name="settings_remove">УДАЛИТЬ</string>
+    <string name="settings_reset_section">Сброс</string>
+    <string name="settings_reset_to_defaults">СБРОСИТЬ ВСЁ</string>
+    <string name="settings_reset_title">Сбросить всё?</string>
+    <string name="settings_reset_message">Все настройки вернутся к значениям по умолчанию, пользовательские источники будут удалены, а все установленные локализации — удалены вместе с прогрессом чтения.</string>
+    <string name="settings_reset_confirm">СБРОСИТЬ</string>
+    <string name="settings_msg_source_added">Источник добавлен · %1$s</string>
+    <string name="settings_msg_source_exists">Источник уже существует.</string>
+    <string name="settings_msg_source_removed">Источник удалён · %1$s</string>
+    <string name="settings_msg_reset_done">Всё сброшено к значениям по умолчанию</string>
+
+    <!-- Overlay window -->
+    <string name="overlay_chapter_select">ВЫБОР ГЛАВЫ</string>
+    <string name="overlay_resize">РАЗМЕР</string>
+    <string name="overlay_reset">СБРОС</string>
+    <string name="overlay_prev">‹ НАЗАД</string>
+    <string name="overlay_next">ВПЕРЁД ›</string>
+    <string name="overlay_episode_short">Эп. %1$d</string>
+    <string name="overlay_no_active">Нет активной локализации.\nОткройте приложение, чтобы установить и активировать её.</string>
+    <string name="overlay_episode_unavailable">Этого эпизода нет в установленном паке.</string>
+    <string name="overlay_pick_episode">Откройте выбор главы, чтобы выбрать эпизод.</string>
+    <plurals name="overlay_episode_count">
+        <item quantity="one">%1$d ЭПИЗОД</item>
+        <item quantity="few">%1$d ЭПИЗОДА</item>
+        <item quantity="many">%1$d ЭПИЗОДОВ</item>
+        <item quantity="other">%1$d ЭПИЗОДА</item>
+    </plurals>
+</resources>

@@ -46,6 +46,10 @@ android {
         }
     }
 
+    lint {
+        error += "MissingTranslation"
+    }
+
     // Exported Room schemas as unit-test assets so MigrationTestHelper can load 1.json/2.json.
     // AGP 9.2.1's generated debugUnitTest test_config.properties points Robolectric's
     // android_merged_assets at `mergeDebugAssets` (the debug variant's own merged assets,

@@ -52,12 +52,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.annotation.StringRes
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.composables.icons.lucide.Captions
 import com.composables.icons.lucide.Check
@@ -69,6 +72,7 @@ import com.composables.icons.lucide.Maximize
 import com.composables.icons.lucide.Minimize
 import com.composables.icons.lucide.RotateCwSquare
 import com.composables.icons.lucide.X
+import com.kimght.LimbusScreenTranslator.R
 import com.kimght.LimbusScreenTranslator.overlay.EpisodeMarker
 import com.kimght.LimbusScreenTranslator.overlay.EpisodeShortcut
 import com.kimght.LimbusScreenTranslator.overlay.OverlayMode
@@ -172,7 +176,7 @@ private fun DialogueContent(state: OverlayUiState, actions: OverlayActions, modi
             Box(Modifier
                 .weight(1f)
                 .fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Placeholder(emptyDialogueMessage(state))
+                Placeholder(stringResource(emptyDialogueMessageRes(state)))
             }
             return@Column
         }
@@ -307,14 +311,18 @@ private fun ChapterContent(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
-                "CHAPTER SELECT",
+                stringResource(R.string.overlay_chapter_select),
                 color = Limbus300,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
                 letterSpacing = 1.sp
             )
+            val episodesLabel = pluralStringResource(
+                R.plurals.overlay_episode_count, state.totalEpisodes, state.totalEpisodes,
+            )
             Text(
-                state.chapterContext,
+                state.chapterSourceName?.takeIf { it.isNotBlank() }
+                    ?.let { "$episodesLabel · $it" } ?: episodesLabel,
                 color = Limbus500, fontSize = 10.sp, letterSpacing = 1.4.sp,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
@@ -324,7 +332,7 @@ private fun ChapterContent(
             Box(Modifier
                 .weight(1f)
                 .fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Placeholder(emptyDialogueMessage(state))
+                Placeholder(stringResource(emptyDialogueMessageRes(state)))
             }
             return@Column
         }
@@ -343,13 +351,13 @@ private fun ChapterContent(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     NavButton(
-                        "‹ PREV",
+                        stringResource(R.string.overlay_prev),
                         state.prevEpisode,
                         actions.onSelectEpisode,
                         Modifier.weight(1f)
                     )
                     NavButton(
-                        "NEXT ›",
+                        stringResource(R.string.overlay_next),
                         state.nextEpisode,
                         actions.onSelectEpisode,
                         Modifier.weight(1f)
@@ -392,7 +400,9 @@ private fun NavButton(
             fontWeight = FontWeight.Medium,
         )
         Text(
-            shortcut?.let { "${it.meta} · ${it.title}" } ?: "—",
+            shortcut?.let {
+                "${it.meta} · ${stringResource(R.string.overlay_episode_short, it.episodeNumber)}"
+            } ?: "—",
             color = if (enabled) Limbus200 else Limbus600,
             fontSize = 11.sp,
             maxLines = 1,
@@ -606,7 +616,7 @@ private fun ResizeContent(state: OverlayUiState, actions: OverlayActions, modifi
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
-                "RESIZE",
+                stringResource(R.string.overlay_resize),
                 color = Limbus300,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
@@ -710,7 +720,7 @@ private fun ResetButton(actions: OverlayActions, modifier: Modifier) {
             .padding(horizontal = 14.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text("RESET", color = Limbus500, fontSize = 10.sp, letterSpacing = 0.8.sp)
+        Text(stringResource(R.string.overlay_reset), color = Limbus500, fontSize = 10.sp, letterSpacing = 0.8.sp)
     }
 }
 
@@ -726,8 +736,6 @@ private fun MinimizedIcon(state: OverlayUiState, actions: OverlayActions) {
             delay(ROTATE_HINT_MILLIS.milliseconds)
             showRotateHint = false
         }
-        // Consume the tap; otherwise every later landscape→portrait
-        // transition would replay the hint (the ComposeView survives rotation).
         hintNonce = 0
     }
     val active = !state.portrait
@@ -783,10 +791,11 @@ private fun Placeholder(message: String) {
     )
 }
 
-private fun emptyDialogueMessage(state: OverlayUiState): String = when {
-    state.noActiveLocalization -> "No localization is active.\nOpen the app to install and activate one."
-    state.episodeUnavailable -> "This episode isn’t in the installed pack."
-    else -> "Open chapter select to choose an episode."
+@StringRes
+private fun emptyDialogueMessageRes(state: OverlayUiState): Int = when {
+    state.noActiveLocalization -> R.string.overlay_no_active
+    state.episodeUnavailable -> R.string.overlay_episode_unavailable
+    else -> R.string.overlay_pick_episode
 }
 
 private fun Modifier.dragHandle(actions: OverlayActions): Modifier = pointerInput(Unit) {

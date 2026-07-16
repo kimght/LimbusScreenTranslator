@@ -11,14 +11,32 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import com.kimght.LimbusScreenTranslator.core.i18n.ProvideUiLanguage
+import com.kimght.LimbusScreenTranslator.core.i18n.localizedTo
+import com.kimght.LimbusScreenTranslator.data.datastore.SettingsRepository
+import com.kimght.LimbusScreenTranslator.data.datastore.Settings as AppSettings
 import com.kimght.LimbusScreenTranslator.feature.navigation.ManagerApp
 import com.kimght.LimbusScreenTranslator.overlay.OverlayService
 import com.kimght.LimbusScreenTranslator.ui.theme.LimbusScreenTranslatorTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var settings: SettingsRepository
+
+    @Volatile
+    private var currentLanguage: String = AppSettings.defaultUiLanguage()
 
     private val overlayPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -26,7 +44,11 @@ class MainActivity : ComponentActivity() {
         if (Settings.canDrawOverlays(this)) {
             OverlayService.start(this)
         } else {
-            Toast.makeText(this, R.string.overlay_permission_required, Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                this,
+                localizedTo(currentLanguage).getString(R.string.overlay_permission_required),
+                Toast.LENGTH_LONG,
+            ).show()
         }
     }
 
@@ -37,12 +59,23 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        lifecycleScope.launch {
+            settings.settings.collect { currentLanguage = it.uiLanguage }
+        }
         setContent {
+            val languageFlow = remember {
+                settings.settings.map { it.uiLanguage }.distinctUntilChanged()
+            }
+            val language by languageFlow.collectAsStateWithLifecycle(
+                initialValue = AppSettings.defaultUiLanguage(),
+            )
             LimbusScreenTranslatorTheme {
-                ManagerApp(
-                    onOpenOverlay = ::launchOverlay,
-                    onCloseOverlay = { OverlayService.stop(this) },
-                )
+                ProvideUiLanguage(language) {
+                    ManagerApp(
+                        onOpenOverlay = ::launchOverlay,
+                        onCloseOverlay = { OverlayService.stop(this) },
+                    )
+                }
             }
         }
     }

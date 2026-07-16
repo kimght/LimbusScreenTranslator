@@ -52,10 +52,10 @@ class OverlayContentTest {
         val nav = episodeNav(chapters, currentEpisode = "7-2")
 
         assertEquals("7-1", nav.prev?.code)
-        assertEquals("Ep 1", nav.prev?.title)
+        assertEquals(1, nav.prev?.episodeNumber)
         assertEquals("CANTO VII", nav.prev?.meta)
         assertEquals("7-3", nav.next?.code)
-        assertEquals("Ep 3", nav.next?.title)
+        assertEquals(3, nav.next?.episodeNumber)
     }
 
     @Test
@@ -79,7 +79,7 @@ class OverlayContentTest {
         val nav = episodeNav(chapters, currentEpisode = "7-4")
 
         assertEquals("I-1", nav.next?.code)
-        assertEquals("Ep 1", nav.next?.title)
+        assertEquals(1, nav.next?.episodeNumber)
         assertEquals("INTERVALLO", nav.next?.meta)
     }
 
@@ -97,12 +97,6 @@ class OverlayContentTest {
 
         assertNull(nav.prev)
         assertNull(nav.next)
-    }
-
-    @Test
-    fun `chapter context counts every episode and pluralises`() {
-        assertEquals("6 EPISODES · Github", chapterContextLabel(6, "Github"))
-        assertEquals("1 EPISODE", chapterContextLabel(1, null))
     }
 
     @Test

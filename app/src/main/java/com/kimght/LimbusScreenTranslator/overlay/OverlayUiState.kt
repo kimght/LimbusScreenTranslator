@@ -28,7 +28,7 @@ data class OverlaySize(val width: Int, val contentHeight: Int)
 
 data class EpisodeShortcut(
     val code: String,
-    val title: String,
+    val episodeNumber: Int,
     val meta: String,
 )
 
@@ -52,7 +52,8 @@ data class OverlayUiState(
     val chapters: List<ChapterRow> = emptyList(),
     val prevEpisode: EpisodeShortcut? = null,
     val nextEpisode: EpisodeShortcut? = null,
-    val chapterContext: String = "",
+    val totalEpisodes: Int = 0,
+    val chapterSourceName: String? = null,
     val overlayWidth: Int = Settings.DEFAULT_OVERLAY_WIDTH,
     val overlayContentHeight: Int =
         Settings.DEFAULT_OVERLAY_CONTENT_HEIGHT,
@@ -108,14 +109,9 @@ fun episodeNav(chapters: List<Chapter>, currentEpisode: String?): EpisodeNav {
 
 private fun navShortcut(chapter: Chapter, episode: Episode): EpisodeShortcut = EpisodeShortcut(
     code = episode.code,
-    title = "Ep ${episode.position + 1}",
+    episodeNumber = episode.position + 1,
     meta = chapter.name,
 )
-
-fun chapterContextLabel(totalEpisodes: Int, sourceName: String?): String {
-    val episodes = "$totalEpisodes EPISODE" + if (totalEpisodes == 1) "" else "S"
-    return if (sourceName.isNullOrBlank()) episodes else "$episodes · $sourceName"
-}
 
 fun overlaySizeLabel(width: Int, height: Int): String = "$width × $height"
 

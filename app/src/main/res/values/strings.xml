@@ -1,9 +1,111 @@
 <resources>
-    <string name="app_name">Limbus Screen Translator</string>
+    <string name="app_name" translatable="false">Limbus Screen Translator</string>
 
     <!-- Overlay foreground service -->
     <string name="overlay_notification_channel">Translation overlay</string>
     <string name="overlay_notification_title">Translation overlay active</string>
     <string name="overlay_notification_text">Tap to open Limbus Screen Translator</string>
     <string name="overlay_permission_required">Allow drawing over other apps to use the overlay</string>
+
+    <!-- Common -->
+    <string name="common_cancel">CANCEL</string>
+
+    <!-- Bottom navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_library">Library</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Home -->
+    <string name="home_active_localization">Active Localization</string>
+    <string name="home_close_overlay">Close Overlay</string>
+    <string name="home_installing">Installing…</string>
+    <string name="home_update_open_overlay">Update &amp; Open Overlay</string>
+    <string name="home_open_overlay">Open Overlay</string>
+    <string name="home_manage_localization">Manage localization</string>
+    <string name="home_whats_new">What\'s New</string>
+    <string name="home_description">Description</string>
+    <string name="home_update_badge">UPDATE</string>
+    <string name="home_version_via_source">%1$s · via %2$s</string>
+    <string name="home_empty">No localization is active.\nInstall one and set it active.</string>
+    <string name="home_browse_library">Browse library</string>
+
+    <!-- Library -->
+    <string name="library_source">Source</string>
+    <string name="library_localizations">Localizations · %1$s</string>
+    <string name="library_loading">Loading…</string>
+    <string name="library_no_sources_selector">No sources</string>
+    <string name="library_error">Couldn\'t reach this source.</string>
+    <string name="library_retry">Retry</string>
+    <string name="library_empty">No localization sources configured.\nAdd one in Settings.</string>
+    <string name="library_open_settings">Open Settings</string>
+    <string name="library_install">Install</string>
+    <string name="library_update">Update</string>
+
+    <!-- Detail -->
+    <string name="detail_back">Back</string>
+    <string name="detail_library">LIBRARY</string>
+    <string name="detail_not_found">This localization is no longer available from its source.</string>
+    <string name="detail_loading">Loading…</string>
+    <string name="detail_by_authors">by %1$s</string>
+    <string name="detail_version">Version</string>
+    <string name="detail_size">Size</string>
+    <string name="detail_install">Install</string>
+    <string name="detail_update_now">Update now</string>
+    <string name="detail_set_active">Set active</string>
+    <string name="detail_uninstall">UNINSTALL</string>
+    <string name="detail_changelog">Changelog</string>
+
+    <!-- Install stages -->
+    <string name="install_stage_installing">INSTALLING</string>
+    <string name="install_stage_downloading">INSTALLING · DOWNLOADING</string>
+    <string name="install_stage_verifying">INSTALLING · VERIFYING ZIP</string>
+    <string name="install_stage_extracting">INSTALLING · EXTRACTING</string>
+    <string name="install_stage_saving">INSTALLING · SAVING</string>
+
+    <!-- Status badges -->
+    <string name="badge_not_installed">NOT INSTALLED</string>
+    <string name="badge_installed">INSTALLED</string>
+    <string name="badge_active">ACTIVE</string>
+    <string name="badge_update">UPDATE</string>
+    <string name="badge_installing">INSTALLING</string>
+
+    <!-- Settings -->
+    <string name="settings_overlay">Overlay</string>
+    <string name="settings_background_opacity">BACKGROUND OPACITY</string>
+    <string name="settings_preview">PREVIEW</string>
+    <string name="settings_preview_speaker">DANTE</string>
+    <string name="settings_preview_line">Lorem ipsum dolor sit amet consectetur adipiscing elit.</string>
+    <string name="settings_interface_language">Interface language</string>
+    <string name="settings_sources">Localization sources</string>
+    <string name="settings_source_name_placeholder">Source name</string>
+    <string name="settings_source_host_placeholder">Host or URL (optional)</string>
+    <string name="settings_add_source">ADD SOURCE</string>
+    <string name="settings_add_source_button">+ ADD SOURCE</string>
+    <string name="settings_remove_source_title">Remove source · %1$s?</string>
+    <string name="settings_remove_source_message">Its manifest URL will be forgotten, and localizations installed from it will be uninstalled along with their reading progress.</string>
+    <string name="settings_remove">REMOVE</string>
+    <string name="settings_reset_section">Reset</string>
+    <string name="settings_reset_to_defaults">RESET TO DEFAULTS</string>
+    <string name="settings_reset_title">Reset everything?</string>
+    <string name="settings_reset_message">All settings return to defaults, custom sources are removed, and all installed localizations are uninstalled along with reading progress.</string>
+    <string name="settings_reset_confirm">RESET</string>
+    <string name="settings_msg_source_added">Source added · %1$s</string>
+    <string name="settings_msg_source_exists">Source already exists.</string>
+    <string name="settings_msg_source_removed">Source removed · %1$s</string>
+    <string name="settings_msg_reset_done">Everything reset to defaults</string>
+
+    <!-- Overlay window -->
+    <string name="overlay_chapter_select">CHAPTER SELECT</string>
+    <string name="overlay_resize">RESIZE</string>
+    <string name="overlay_reset">RESET</string>
+    <string name="overlay_prev">‹ PREV</string>
+    <string name="overlay_next">NEXT ›</string>
+    <string name="overlay_episode_short">Ep %1$d</string>
+    <string name="overlay_no_active">No localization is active.\nOpen the app to install and activate one.</string>
+    <string name="overlay_episode_unavailable">This episode isn&#x2019;t in the installed pack.</string>
+    <string name="overlay_pick_episode">Open chapter select to choose an episode.</string>
+    <plurals name="overlay_episode_count">
+        <item quantity="one">%1$d EPISODE</item>
+        <item quantity="other">%1$d EPISODES</item>
+    </plurals>
 </resources>

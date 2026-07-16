@@ -1,8 +1,10 @@
 package com.kimght.LimbusScreenTranslator.feature.detail
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kimght.LimbusScreenTranslator.R
 import com.kimght.LimbusScreenTranslator.data.datastore.SettingsRepository
 import com.kimght.LimbusScreenTranslator.data.install.InstallState
 import com.kimght.LimbusScreenTranslator.data.repository.LocalizationRepository
@@ -26,7 +28,7 @@ data class DetailUiState(
     val localization: Localization? = null,
     val status: LocalizationStatus = LocalizationStatus.NOT_INSTALLED,
     val installPercent: Int? = null,
-    val installStage: String = "INSTALLING",
+    @StringRes val installStage: Int = R.string.install_stage_installing,
 )
 
 @HiltViewModel
@@ -68,7 +70,7 @@ class DetailViewModel @Inject constructor(
                     isInstalling = isInstalling,
                 ),
                 installPercent = state.percentOrNull(),
-                installStage = state.stageLabel(),
+                installStage = state.stageLabelRes(),
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DetailUiState())
@@ -112,10 +114,11 @@ private fun InstallState?.percentOrNull(): Int? = when (this) {
     else -> null
 }
 
-private fun InstallState?.stageLabel(): String = when (this) {
-    is InstallState.Downloading -> "INSTALLING · DOWNLOADING"
-    InstallState.Verifying -> "INSTALLING · VERIFYING ZIP"
-    InstallState.Extracting -> "INSTALLING · EXTRACTING"
-    InstallState.Persisting -> "INSTALLING · SAVING"
-    else -> "INSTALLING"
+@StringRes
+internal fun InstallState?.stageLabelRes(): Int = when (this) {
+    is InstallState.Downloading -> R.string.install_stage_downloading
+    InstallState.Verifying -> R.string.install_stage_verifying
+    InstallState.Extracting -> R.string.install_stage_extracting
+    InstallState.Persisting -> R.string.install_stage_saving
+    else -> R.string.install_stage_installing
 }

@@ -21,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -28,6 +29,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.composables.icons.lucide.ChevronLeft
 import com.composables.icons.lucide.Lucide
+import com.kimght.LimbusScreenTranslator.R
 import com.kimght.LimbusScreenTranslator.core.designsystem.FlagChip
 import com.kimght.LimbusScreenTranslator.core.designsystem.GoldButton
 import com.kimght.LimbusScreenTranslator.core.designsystem.InstallProgressRow
@@ -90,12 +92,12 @@ private fun DetailContent(
         ) {
             Icon(
                 imageVector = Lucide.ChevronLeft,
-                contentDescription = "Back",
+                contentDescription = stringResource(R.string.detail_back),
                 modifier = Modifier.size(18.dp),
                 tint = Limbus500,
             )
             Text(
-                text = "LIBRARY",
+                text = stringResource(R.string.detail_library),
                 color = Limbus500,
                 fontFamily = MonoFontFamily,
                 fontSize = 11.sp,
@@ -106,14 +108,14 @@ private fun DetailContent(
         val loc = state.localization
         when {
             state.notFound -> Text(
-                text = "This localization is no longer available from its source.",
+                text = stringResource(R.string.detail_not_found),
                 color = Limbus500,
                 fontSize = 14.sp,
                 modifier = Modifier.padding(20.dp),
             )
 
             loc == null -> Text(
-                text = "Loading…",
+                text = stringResource(R.string.detail_loading),
                 color = Limbus500,
                 fontSize = 13.sp,
                 modifier = Modifier.padding(20.dp),
@@ -132,7 +134,10 @@ private fun DetailContent(
                             fontSize = 25.sp,
                         )
                         Text(
-                            text = "by ${loc.authors.joinToString(", ")}",
+                            text = stringResource(
+                                R.string.detail_by_authors,
+                                loc.authors.joinToString(", "),
+                            ),
                             color = Limbus500,
                             fontSize = 11.sp,
                             modifier = Modifier.padding(top = 6.dp),
@@ -163,7 +168,7 @@ private fun DetailContent(
                 if (state.installPercent != null) {
                     Spacer(Modifier.size(8.dp))
                     InstallProgressRow(
-                        stageLabel = state.installStage,
+                        stageLabel = stringResource(state.installStage),
                         percent = state.installPercent,
                         barHeight = 6.dp,
                     )
@@ -179,7 +184,7 @@ private fun DetailContent(
                             .border(1.dp, Hairline, RoundedCornerShape(8.dp))
                             .padding(horizontal = 16.dp, vertical = 15.dp),
                     ) {
-                        SectionLabel("Changelog")
+                        SectionLabel(stringResource(R.string.detail_changelog))
                         Spacer(Modifier.size(11.dp))
                         MarkdownChangelog(loc.description)
                     }
@@ -198,8 +203,8 @@ private fun MetadataGrid(version: String, size: String) {
             .border(1.dp, Hairline, RoundedCornerShape(8.dp)),
         horizontalArrangement = Arrangement.spacedBy(1.dp),
     ) {
-        MetaCell("Version", version, Modifier.weight(1f))
-        MetaCell("Size", size, Modifier.weight(1f))
+        MetaCell(stringResource(R.string.detail_version), version, Modifier.weight(1f))
+        MetaCell(stringResource(R.string.detail_size), size, Modifier.weight(1f))
     }
 }
 
@@ -237,14 +242,18 @@ private fun ActionRow(
     if (installing) return
     when (status) {
         LocalizationStatus.NOT_INSTALLED ->
-            GoldButton(text = "Install", onClick = onInstall)
+            GoldButton(text = stringResource(R.string.detail_install), onClick = onInstall)
 
         LocalizationStatus.UPDATE_AVAILABLE ->
-            GoldButton(text = "Update now", onClick = onInstall, accent = Limbus400)
+            GoldButton(
+                text = stringResource(R.string.detail_update_now),
+                onClick = onInstall,
+                accent = Limbus400,
+            )
 
         LocalizationStatus.INSTALLED ->
             GoldButton(
-                text = "Set active",
+                text = stringResource(R.string.detail_set_active),
                 onClick = onSetActive,
                 accent = Limbus300,
             )
@@ -267,7 +276,7 @@ private fun UninstallButton(onClick: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "UNINSTALL",
+            text = stringResource(R.string.detail_uninstall),
             color = DangerBright,
             fontFamily = MonoFontFamily,
             fontSize = 12.sp,

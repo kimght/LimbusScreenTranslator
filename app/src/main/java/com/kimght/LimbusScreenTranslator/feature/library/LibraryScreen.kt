@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.composables.icons.lucide.ChevronDown
 import com.composables.icons.lucide.ChevronUp
 import com.composables.icons.lucide.Lucide
+import com.kimght.LimbusScreenTranslator.R
 import com.kimght.LimbusScreenTranslator.core.designsystem.FlagChip
 import com.kimght.LimbusScreenTranslator.core.designsystem.InstallProgressRow
 import com.kimght.LimbusScreenTranslator.core.designsystem.SectionLabel
@@ -95,7 +97,7 @@ private fun LibraryContent(
         if (state.noSources) {
             NoSourcesState(onOpenSettings)
         } else {
-            SectionLabel("Source")
+            SectionLabel(stringResource(R.string.library_source))
             Spacer(Modifier.size(9.dp))
             SourceSelector(
                 sources = state.sources,
@@ -103,13 +105,15 @@ private fun LibraryContent(
                 onSelect = onSelectSource,
             )
             Spacer(Modifier.size(18.dp))
-            SectionLabel("Localizations · ${state.selectedSource?.name ?: ""}")
+            SectionLabel(
+                stringResource(R.string.library_localizations, state.selectedSource?.name ?: ""),
+            )
             Spacer(Modifier.size(10.dp))
 
             when {
                 state.error -> ErrorState(onRetry)
                 state.loading -> Text(
-                    text = "Loading…",
+                    text = stringResource(R.string.library_loading),
                     color = Limbus500,
                     fontSize = 13.sp,
                     modifier = Modifier.padding(top = 8.dp),
@@ -149,7 +153,7 @@ private fun SourceSelector(
         ) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = selected?.name ?: "No sources",
+                    text = selected?.name ?: stringResource(R.string.library_no_sources_selector),
                     color = Limbus300,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
@@ -240,7 +244,7 @@ private fun LocalizationRow(
                 item.installPercent != null -> Unit
                 status == LocalizationStatus.NOT_INSTALLED ->
                     SmallButton(
-                        "Install",
+                        stringResource(R.string.library_install),
                         Limbus500,
                         Limbus500,
                         Limbus500.copy(alpha = 0.16f)
@@ -248,7 +252,7 @@ private fun LocalizationRow(
 
                 status == LocalizationStatus.UPDATE_AVAILABLE ->
                     SmallButton(
-                        "Update",
+                        stringResource(R.string.library_update),
                         Limbus400,
                         Limbus400.copy(alpha = 0.55f),
                         Limbus400.copy(alpha = 0.14f)
@@ -259,7 +263,10 @@ private fun LocalizationRow(
         }
         if (item.installPercent != null) {
             Spacer(Modifier.size(11.dp))
-            InstallProgressRow(stageLabel = "INSTALLING", percent = item.installPercent)
+            InstallProgressRow(
+                stageLabel = stringResource(R.string.install_stage_installing),
+                percent = item.installPercent,
+            )
         }
     }
 }
@@ -301,13 +308,13 @@ private fun ErrorState(onRetry: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = "Couldn't reach this source.",
+            text = stringResource(R.string.library_error),
             color = Limbus500,
             fontSize = 14.sp,
             modifier = Modifier.padding(bottom = 14.dp),
         )
         com.kimght.LimbusScreenTranslator.core.designsystem.OutlineButton(
-            text = "Retry",
+            text = stringResource(R.string.library_retry),
             onClick = onRetry,
             foreground = Limbus300,
             border = Limbus500,
@@ -328,14 +335,14 @@ private fun NoSourcesState(onOpenSettings: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = "No localization sources configured.\nAdd one in Settings.",
+            text = stringResource(R.string.library_empty),
             color = Limbus500,
             fontSize = 14.sp,
             lineHeight = 21.sp,
             modifier = Modifier.padding(bottom = 14.dp),
         )
         com.kimght.LimbusScreenTranslator.core.designsystem.OutlineButton(
-            text = "Open Settings",
+            text = stringResource(R.string.library_open_settings),
             onClick = onOpenSettings,
             foreground = Limbus300,
             border = Limbus500,

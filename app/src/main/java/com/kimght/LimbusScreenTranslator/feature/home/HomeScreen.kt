@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -29,6 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Play
 import com.composables.icons.lucide.X
+import com.kimght.LimbusScreenTranslator.R
 import com.kimght.LimbusScreenTranslator.core.designsystem.FlagChip
 import com.kimght.LimbusScreenTranslator.core.designsystem.GoldButton
 import com.kimght.LimbusScreenTranslator.core.designsystem.MarkdownChangelog
@@ -86,7 +88,7 @@ private fun HomeContent(
             .padding(horizontal = 20.dp)
             .padding(top = 14.dp, bottom = 28.dp),
     ) {
-        SectionLabel("Active Localization")
+        SectionLabel(stringResource(R.string.home_active_localization))
         androidx.compose.foundation.layout.Spacer(Modifier.size(12.dp))
 
         val active = state.active
@@ -95,10 +97,10 @@ private fun HomeContent(
             androidx.compose.foundation.layout.Spacer(Modifier.size(14.dp))
 
             val ctaLabel = when {
-                state.overlayRunning -> "Close Overlay"
-                active.isInstalling -> "Installing…"
-                active.hasUpdate -> "Update & Open Overlay"
-                else -> "Open Overlay"
+                state.overlayRunning -> stringResource(R.string.home_close_overlay)
+                active.isInstalling -> stringResource(R.string.home_installing)
+                active.hasUpdate -> stringResource(R.string.home_update_open_overlay)
+                else -> stringResource(R.string.home_open_overlay)
             }
             GoldButton(
                 text = ctaLabel,
@@ -114,7 +116,7 @@ private fun HomeContent(
                 },
             )
             androidx.compose.foundation.layout.Spacer(Modifier.size(9.dp))
-            OutlineButton(text = "Manage localization", onClick = { onManage(active) })
+            OutlineButton(text = stringResource(R.string.home_manage_localization), onClick = { onManage(active) })
 
             androidx.compose.foundation.layout.Spacer(Modifier.size(22.dp))
             val whatsNew = active.hasUpdate
@@ -124,7 +126,7 @@ private fun HomeContent(
                 active.description
             }
             SectionLabel(
-                if (whatsNew) "What's New" else "Description",
+                stringResource(if (whatsNew) R.string.home_whats_new else R.string.home_description),
                 trailing = if (whatsNew) active.availableVersion else active.installedVersion,
             )
             androidx.compose.foundation.layout.Spacer(Modifier.size(10.dp))
@@ -174,7 +176,11 @@ private fun ActiveCard(active: ActiveLocalization) {
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = "${active.installedVersion} · via ${active.sourceName}",
+                    text = stringResource(
+                        R.string.home_version_via_source,
+                        active.installedVersion,
+                        active.sourceName,
+                    ),
                     color = Limbus500,
                     fontSize = 11.sp,
                     modifier = Modifier.padding(top = 5.dp),
@@ -194,7 +200,7 @@ private fun ActiveCard(active: ActiveLocalization) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "UPDATE",
+                    text = stringResource(R.string.home_update_badge),
                     color = Limbus400,
                     fontSize = 9.sp,
                     letterSpacing = 1.4.sp,
@@ -221,14 +227,14 @@ private fun EmptyState(onBrowseLibrary: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = "No localization is active.\nInstall one and set it active.",
+            text = stringResource(R.string.home_empty),
             color = Limbus500,
             fontSize = 14.sp,
             lineHeight = 21.sp,
             modifier = Modifier.padding(bottom = 14.dp),
         )
         OutlineButton(
-            text = "Browse library",
+            text = stringResource(R.string.home_browse_library),
             onClick = onBrowseLibrary,
             foreground = Limbus300,
             border = Limbus500,

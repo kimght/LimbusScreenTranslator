@@ -1,7 +1,9 @@
 package com.kimght.LimbusScreenTranslator.feature.settings
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kimght.LimbusScreenTranslator.R
 import com.kimght.LimbusScreenTranslator.data.datastore.Settings
 import com.kimght.LimbusScreenTranslator.data.datastore.SettingsRepository
 import com.kimght.LimbusScreenTranslator.data.repository.AddSourceResult
@@ -21,6 +23,8 @@ import kotlin.math.roundToInt
 
 data class UiLanguage(val code: String, val label: String)
 
+data class UiMessage(@StringRes val id: Int, val args: List<Any> = emptyList())
+
 data class SettingsUiState(
     val opacity: Float = Settings.DEFAULT_OPACITY,
     val uiLanguage: String = Settings.defaultUiLanguage(),
@@ -36,8 +40,8 @@ class SettingsViewModel @Inject constructor(
     private val localizations: LocalizationRepository,
 ) : ViewModel() {
 
-    private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)
-    val messages: SharedFlow<String> = _messages
+    private val _messages = MutableSharedFlow<UiMessage>(extraBufferCapacity = 4)
+    val messages: SharedFlow<UiMessage> = _messages
 
     val uiState: StateFlow<SettingsUiState> = combine(
         settings.settings,
@@ -66,8 +70,12 @@ class SettingsViewModel @Inject constructor(
         val url = normalizeSourceInput(hostOrUrl, trimmedName)
         viewModelScope.launch {
             when (sourceRepository.addSource(trimmedName, url)) {
-                AddSourceResult.Success -> _messages.tryEmit("Source added · $trimmedName")
-                AddSourceResult.DuplicateName -> _messages.tryEmit("Source already exists.")
+                AddSourceResult.Success -> _messages.tryEmit(
+                    UiMessage(R.string.settings_msg_source_added, listOf(trimmedName))
+                )
+                AddSourceResult.DuplicateName -> _messages.tryEmit(
+                    UiMessage(R.string.settings_msg_source_exists)
+                )
             }
         }
     }
@@ -75,7 +83,7 @@ class SettingsViewModel @Inject constructor(
     fun removeSource(name: String) {
         viewModelScope.launch {
             localizations.removeSourceWithPacks(name)
-            _messages.tryEmit("Source removed · $name")
+            _messages.tryEmit(UiMessage(R.string.settings_msg_source_removed, listOf(name)))
         }
     }
 
@@ -83,7 +91,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             localizations.restoreDefaultSources()
             settings.resetToDefaults()
-            _messages.tryEmit("Everything reset to defaults")
+            _messages.tryEmit(UiMessage(R.string.settings_msg_reset_done))
         }
     }
 
