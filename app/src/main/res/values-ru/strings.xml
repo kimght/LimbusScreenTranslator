@@ -68,7 +68,7 @@
     <string name="badge_installing">УСТАНОВКА</string>
 
     <!-- Settings -->
-    <string name="settings_overlay">Оверлей</string>
+    <string name="settings_overlay">Плавающее окно</string>
     <string name="settings_background_opacity">НЕПРОЗРАЧНОСТЬ ФОНА</string>
     <string name="settings_preview">ПРЕДПРОСМОТР</string>
     <string name="settings_preview_speaker">ДАНТЕ</string>
