@@ -78,6 +78,7 @@ import com.kimght.LimbusScreenTranslator.overlay.EpisodeShortcut
 import com.kimght.LimbusScreenTranslator.overlay.OverlayMode
 import com.kimght.LimbusScreenTranslator.overlay.OverlayUiState
 import com.kimght.LimbusScreenTranslator.data.datastore.Settings
+import com.kimght.LimbusScreenTranslator.domain.markup.DialogueMarkup
 import com.kimght.LimbusScreenTranslator.overlay.lineNumberLabel
 import com.kimght.LimbusScreenTranslator.overlay.overlaySizeLabel
 import com.kimght.LimbusScreenTranslator.ui.theme.BgBackground
@@ -276,11 +277,12 @@ private fun DialogueHeader(speaker: String?, title: String?, actions: OverlayAct
 
 @Composable
 private fun LineText(text: String, scale: Float) {
+    val styled = remember(text) { DialogueMarkup.parse(text).toAnnotatedString() }
     Box(Modifier
         .fillMaxSize()
         .padding(horizontal = 26.dp), contentAlignment = Alignment.Center) {
         Text(
-            text = text,
+            text = styled,
             color = Limbus100,
             textAlign = TextAlign.Center,
             fontWeight = FontWeight.Medium,
