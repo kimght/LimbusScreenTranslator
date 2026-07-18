@@ -35,7 +35,6 @@
             </intent-filter>
         </activity>
 
-        <!-- Floating translation overlay drawn over the running game (spec §6). -->
         <service
             android:name=".overlay.OverlayService"
             android:exported="false"
