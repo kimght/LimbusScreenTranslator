@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Parse version from tag
+        id: version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          IFS='.' read -r major minor patch <<< "$version"
+          echo "name=$version" >> "$GITHUB_OUTPUT"
+          echo "code=$((major * 10000 + ${minor:-0} * 100 + ${patch:-0}))" >> "$GITHUB_OUTPUT"
+
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest
+
+      - name: Decode keystore
+        run: echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE }}
+
+      - name: Build signed release APK
+        run: >
+          ./gradlew assembleRelease
+          -PappVersionName="${{ steps.version.outputs.name }}"
+          -PappVersionCode="${{ steps.version.outputs.code }}"
+        env:
+          KEYSTORE_FILE: ${{ runner.temp }}/release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Rename APK
+        run: cp app/build/outputs/apk/release/app-release.apk "LimbusScreenTranslator-${GITHUB_REF_NAME}.apk"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: LimbusScreenTranslator-*.apk

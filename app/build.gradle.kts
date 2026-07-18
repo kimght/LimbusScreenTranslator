@@ -19,16 +19,31 @@ android {
         applicationId = "com.kimght.LimbusScreenTranslator"
         minSdk = 28
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = providers.gradleProperty("appVersionCode").getOrElse("1").toInt()
+        versionName = providers.gradleProperty("appVersionName").getOrElse("1.0")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    val releaseKeystorePath = System.getenv("KEYSTORE_FILE")
+    if (releaseKeystorePath != null) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(releaseKeystorePath)
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
             optimization {
                 enable = false
+            }
+            if (releaseKeystorePath != null) {
+                signingConfig = signingConfigs.getByName("release")
             }
         }
     }
