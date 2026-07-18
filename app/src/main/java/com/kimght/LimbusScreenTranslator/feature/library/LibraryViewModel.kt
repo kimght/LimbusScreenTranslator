@@ -3,7 +3,6 @@ package com.kimght.LimbusScreenTranslator.feature.library
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kimght.LimbusScreenTranslator.data.datastore.SettingsRepository
-import com.kimght.LimbusScreenTranslator.data.install.InstallState
 import com.kimght.LimbusScreenTranslator.data.repository.LocalizationListing
 import com.kimght.LimbusScreenTranslator.data.repository.LocalizationRepository
 import com.kimght.LimbusScreenTranslator.data.repository.SourceRepository
@@ -21,18 +20,13 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class LibraryItem(
-    val listing: LocalizationListing,
-    val installPercent: Int?,
-)
-
 data class LibraryUiState(
     val loading: Boolean = true,
     val error: Boolean = false,
     val noSources: Boolean = false,
     val sources: List<Source> = emptyList(),
     val selectedSource: Source? = null,
-    val items: List<LibraryItem> = emptyList(),
+    val items: List<LocalizationListing> = emptyList(),
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -46,7 +40,6 @@ class LibraryViewModel @Inject constructor(
 
     private val catalog = MutableStateFlow<LoadedCatalog?>(null)
 
-    private val chaptersUrl = MutableStateFlow<String?>(null)
     private val fetchError = MutableStateFlow(false)
     private val selectedSourceName = MutableStateFlow<String?>(null)
 
@@ -79,8 +72,7 @@ class LibraryViewModel @Inject constructor(
                     sourceRepository.sources,
                     selectedSource,
                     localizationRepository.listings(cat.localizations, cat.source.name),
-                    localizationRepository.installStates,
-                ) { sources, sel, listings, installStates ->
+                ) { sources, sel, listings ->
                     if (sources.isEmpty()) {
                         LibraryUiState(loading = false, noSources = true)
                     } else {
@@ -89,9 +81,7 @@ class LibraryViewModel @Inject constructor(
                             error = false,
                             sources = sources,
                             selectedSource = sel,
-                            items = listings.map { listing ->
-                                LibraryItem(listing, installStates[listing.packKey].percentOrNull())
-                            },
+                            items = listings,
                         )
                     }
                 }
@@ -110,7 +100,6 @@ class LibraryViewModel @Inject constructor(
         runCatching { localizationRepository.fetchCatalog(source.url) }
             .onSuccess {
                 catalog.value = LoadedCatalog(source, it.localizations)
-                chaptersUrl.value = it.chaptersUrl
             }
             .onFailure { fetchError.value = true }
     }
@@ -123,21 +112,4 @@ class LibraryViewModel @Inject constructor(
     fun retry() {
         viewModelScope.launch { selectedSource.first()?.let { loadCatalog(it) } }
     }
-
-    fun install(item: LibraryItem) {
-        val loaded = catalog.value ?: return
-        viewModelScope.launch {
-            localizationRepository.install(
-                item.listing.localization,
-                loaded.source.name,
-                chaptersUrl.value
-            )
-        }
-    }
-}
-
-private fun InstallState?.percentOrNull(): Int? = when (this) {
-    is InstallState.Downloading -> percent
-    InstallState.Verifying, InstallState.Extracting, InstallState.Persisting -> 100
-    else -> null
 }

@@ -36,8 +36,6 @@
     <string name="library_retry">Повторить</string>
     <string name="library_empty">Источники локализаций не настроены.\nДобавьте их в настройках.</string>
     <string name="library_open_settings">Открыть настройки</string>
-    <string name="library_install">Установить</string>
-    <string name="library_update">Обновить</string>
 
     <!-- Detail -->
     <string name="detail_back">Назад</string>

@@ -38,8 +38,6 @@
     <string name="library_retry">Retry</string>
     <string name="library_empty">No localization sources configured.\nAdd one in Settings.</string>
     <string name="library_open_settings">Open Settings</string>
-    <string name="library_install">Install</string>
-    <string name="library_update">Update</string>
 
     <!-- Detail -->
     <string name="detail_back">Back</string>

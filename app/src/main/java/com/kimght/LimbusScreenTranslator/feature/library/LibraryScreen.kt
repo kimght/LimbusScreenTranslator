@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -26,8 +27,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -39,17 +41,15 @@ import com.composables.icons.lucide.ChevronUp
 import com.composables.icons.lucide.Lucide
 import com.kimght.LimbusScreenTranslator.R
 import com.kimght.LimbusScreenTranslator.core.designsystem.FlagChip
-import com.kimght.LimbusScreenTranslator.core.designsystem.InstallProgressRow
 import com.kimght.LimbusScreenTranslator.core.designsystem.SectionLabel
-import com.kimght.LimbusScreenTranslator.core.designsystem.StatusBadge
 import com.kimght.LimbusScreenTranslator.core.designsystem.clickableEnabled
+import com.kimght.LimbusScreenTranslator.data.repository.LocalizationListing
 import com.kimght.LimbusScreenTranslator.domain.model.LocalizationStatus
 import com.kimght.LimbusScreenTranslator.ui.theme.Hairline
 import com.kimght.LimbusScreenTranslator.ui.theme.InsetBg
 import com.kimght.LimbusScreenTranslator.ui.theme.Limbus100
 import com.kimght.LimbusScreenTranslator.ui.theme.Limbus200
 import com.kimght.LimbusScreenTranslator.ui.theme.Limbus300
-import com.kimght.LimbusScreenTranslator.ui.theme.Limbus400
 import com.kimght.LimbusScreenTranslator.ui.theme.Limbus500
 
 @Composable
@@ -63,13 +63,12 @@ fun LibraryScreen(
     LibraryContent(
         state = state,
         onSelectSource = viewModel::selectSource,
-        onInstall = viewModel::install,
         onRetry = viewModel::retry,
         onOpenDetail = { item ->
             state.selectedSource?.let {
                 onOpenDetail(
                     it.name,
-                    item.listing.localization.id
+                    item.localization.id
                 )
             }
         },
@@ -82,9 +81,8 @@ fun LibraryScreen(
 private fun LibraryContent(
     state: LibraryUiState,
     onSelectSource: (String) -> Unit,
-    onInstall: (LibraryItem) -> Unit,
     onRetry: () -> Unit,
-    onOpenDetail: (LibraryItem) -> Unit,
+    onOpenDetail: (LocalizationListing) -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -123,8 +121,8 @@ private fun LibraryContent(
                     verticalArrangement = Arrangement.spacedBy(9.dp),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 28.dp),
                 ) {
-                    items(state.items, key = { it.listing.localization.id }) { item ->
-                        LocalizationRow(item, onInstall = onInstall, onOpen = onOpenDetail)
+                    items(state.items, key = { it.localization.id }) { item ->
+                        LocalizationRow(item, onOpen = onOpenDetail)
                     }
                 }
             }
@@ -204,96 +202,64 @@ private fun SourceSelector(
 
 @Composable
 private fun LocalizationRow(
-    item: LibraryItem,
-    onInstall: (LibraryItem) -> Unit,
-    onOpen: (LibraryItem) -> Unit,
+    listing: LocalizationListing,
+    onOpen: (LocalizationListing) -> Unit,
 ) {
-    val loc = item.listing.localization
-    val status = item.listing.status
-    Column(
-        Modifier
+    val loc = listing.localization
+    val indicator = listing.status.rowIndicator()
+    val borderColor =
+        if (listing.status == LocalizationStatus.ACTIVE) {
+            Limbus300.copy(alpha = 0.55f)
+        } else {
+            Hairline
+        }
+    Row(
+        modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(InsetBg)
-            .border(1.dp, Hairline, RoundedCornerShape(8.dp))
-            .clickableEnabled(true) { onOpen(item) }
+            .border(1.dp, borderColor, RoundedCornerShape(8.dp))
+            .clickableEnabled(true) { onOpen(listing) }
             .padding(horizontal = 13.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(11.dp),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(11.dp),
-        ) {
-            FlagChip(loc.flag, width = 38.dp, height = 28.dp, fontSize = 10.sp)
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = loc.name,
-                    color = Limbus100,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = "${loc.version} · ${formatSize(loc.sizeBytes)}",
-                    color = Limbus500,
-                    fontSize = 10.sp,
-                    modifier = Modifier.padding(top = 3.dp),
-                )
-            }
-            when {
-                item.installPercent != null -> Unit
-                status == LocalizationStatus.NOT_INSTALLED ->
-                    SmallButton(
-                        stringResource(R.string.library_install),
-                        Limbus500,
-                        Limbus500,
-                        Limbus500.copy(alpha = 0.16f)
-                    ) { onInstall(item) }
-
-                status == LocalizationStatus.UPDATE_AVAILABLE ->
-                    SmallButton(
-                        stringResource(R.string.library_update),
-                        Limbus400,
-                        Limbus400.copy(alpha = 0.55f),
-                        Limbus400.copy(alpha = 0.14f)
-                    ) { onInstall(item) }
-
-                else -> StatusBadge(status)
-            }
-        }
-        if (item.installPercent != null) {
-            Spacer(Modifier.size(11.dp))
-            InstallProgressRow(
-                stageLabel = stringResource(R.string.install_stage_installing),
-                percent = item.installPercent,
+        FlagChip(loc.flag, width = 38.dp, height = 28.dp, fontSize = 10.sp)
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = loc.name,
+                color = Limbus100,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = "${loc.version} · ${formatSize(loc.sizeBytes)}",
+                color = Limbus500,
+                fontSize = 10.sp,
+                modifier = Modifier.padding(top = 3.dp),
             )
         }
-    }
-}
-
-@Composable
-private fun SmallButton(
-    text: String,
-    foreground: Color,
-    border: Color,
-    background: Color,
-    onClick: () -> Unit,
-) {
-    Box(
-        Modifier
-            .clip(RoundedCornerShape(2.dp))
-            .background(background)
-            .border(1.dp, border, RoundedCornerShape(2.dp))
-            .clickableEnabled(true, onClick)
-            .padding(horizontal = 13.dp, vertical = 7.dp),
-    ) {
-        Text(
-            text = text,
-            color = foreground,
-            fontFamily = com.kimght.LimbusScreenTranslator.ui.theme.MonoFontFamily,
-            fontSize = 11.sp,
-            letterSpacing = 0.5.sp,
-        )
+        if (indicator != null) {
+            val label = stringResource(indicator.label)
+            if (indicator.spinner) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .size(16.dp)
+                        .semantics { contentDescription = label },
+                    color = indicator.tint,
+                    strokeWidth = 2.dp,
+                )
+            } else {
+                Icon(
+                    imageVector = indicator.icon!!,
+                    contentDescription = label,
+                    modifier = Modifier.size(18.dp),
+                    tint = indicator.tint,
+                )
+            }
+        }
     }
 }
 
