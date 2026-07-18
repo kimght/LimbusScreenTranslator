@@ -1,6 +1,7 @@
 package com.kimght.LimbusScreenTranslator.feature.library
 
 import com.composables.icons.lucide.Check
+import com.composables.icons.lucide.CheckCheck
 import com.composables.icons.lucide.FolderSync
 import com.composables.icons.lucide.Lucide
 import com.kimght.LimbusScreenTranslator.R
@@ -36,10 +37,10 @@ class LocalizationRowIndicatorTest {
     }
 
     @Test
-    fun `active shows a gold check`() {
+    fun `active shows a gold check check`() {
         val indicator = LocalizationStatus.ACTIVE.rowIndicator()!!
         assertEquals(R.string.badge_active, indicator.label)
-        assertEquals(Lucide.Check, indicator.icon)
+        assertEquals(Lucide.CheckCheck, indicator.icon)
         assertEquals(Limbus300, indicator.tint)
         assertFalse(indicator.spinner)
     }
