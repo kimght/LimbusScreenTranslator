@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-    namespace = "com.kimght.LimbusScreenTranslator"
+    namespace = "com.kimght.limbusscreentranslator"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -16,7 +16,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.kimght.LimbusScreenTranslator"
+        applicationId = "com.kimght.limbusscreentranslator"
         minSdk = 28
         targetSdk = 36
         versionCode = providers.gradleProperty("appVersionCode").getOrElse("1").toInt()
