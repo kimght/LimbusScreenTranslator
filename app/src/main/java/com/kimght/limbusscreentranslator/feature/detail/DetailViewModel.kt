@@ -5,13 +5,16 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kimght.limbusscreentranslator.R
+import com.kimght.limbusscreentranslator.data.datastore.Settings
 import com.kimght.limbusscreentranslator.data.datastore.SettingsRepository
 import com.kimght.limbusscreentranslator.data.install.InstallState
 import com.kimght.limbusscreentranslator.data.repository.LocalizationRepository
 import com.kimght.limbusscreentranslator.data.repository.SourceRepository
+import com.kimght.limbusscreentranslator.domain.model.InstalledPack
 import com.kimght.limbusscreentranslator.domain.model.Localization
 import com.kimght.limbusscreentranslator.domain.model.LocalizationStatus
 import com.kimght.limbusscreentranslator.domain.model.PackKey
+import com.kimght.limbusscreentranslator.overlay.OverlayRunningState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,6 +32,7 @@ data class DetailUiState(
     val status: LocalizationStatus = LocalizationStatus.NOT_INSTALLED,
     val installPercent: Int? = null,
     @StringRes val installStage: Int = R.string.install_stage_installing,
+    val overlayRunning: Boolean = false,
 )
 
 @HiltViewModel
@@ -37,6 +41,7 @@ class DetailViewModel @Inject constructor(
     private val localizationRepository: LocalizationRepository,
     private val sourceRepository: SourceRepository,
     private val settings: SettingsRepository,
+    overlayRunningState: OverlayRunningState,
 ) : ViewModel() {
 
     val sourceName: String = checkNotNull(savedStateHandle["sourceName"])
@@ -53,7 +58,19 @@ class DetailViewModel @Inject constructor(
         localizationRepository.installedPacks,
         localizationRepository.installStates,
         settings.settings,
-    ) { loc, failed, installed, installStates, prefs ->
+        overlayRunningState.isRunning,
+    ) { values ->
+        val loc = values[0] as Localization?
+        val failed = values[1] as Boolean
+
+        @Suppress("UNCHECKED_CAST")
+        val installed = values[2] as List<InstalledPack>
+
+        @Suppress("UNCHECKED_CAST")
+        val installStates = values[3] as Map<String, InstallState>
+        val prefs = values[4] as Settings
+        val overlayRunning = values[5] as Boolean
+
         if (loc == null) {
             DetailUiState(loading = !failed, notFound = failed)
         } else {
@@ -71,6 +88,7 @@ class DetailViewModel @Inject constructor(
                 ),
                 installPercent = state.percentOrNull(),
                 installStage = state.stageLabelRes(),
+                overlayRunning = overlayRunning,
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DetailUiState())

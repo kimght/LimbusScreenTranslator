@@ -106,7 +106,12 @@ class LocalizationRepository @Inject constructor(
         sourceName: String,
         chaptersUrl: String?,
     ): Boolean {
+        val key = PackKey.of(sourceName, localization.id)
+        val isFreshInstall = installedPackDao.get(key) == null
         val installed = installManager.install(localization, sourceName)
+        if (installed && isFreshInstall) {
+            settings.setActiveLocalizationId(key)
+        }
         if (installed && !chaptersUrl.isNullOrBlank()) {
             refreshChaptersWithRetry(sourceName, chaptersUrl)
         }

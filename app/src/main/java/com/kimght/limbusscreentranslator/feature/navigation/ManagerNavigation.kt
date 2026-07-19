@@ -151,6 +151,8 @@ fun ManagerApp(
                 DetailScreen(
                     onBack = { navController.popBackStack() },
                     onUninstalled = { navController.popBackStack() },
+                    onOpenOverlay = onOpenOverlay,
+                    onCloseOverlay = onCloseOverlay,
                 )
             }
         }

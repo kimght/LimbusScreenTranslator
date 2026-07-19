@@ -7,6 +7,13 @@
     <string name="overlay_notification_text">Tap to open Limbus Screen Translator</string>
     <string name="overlay_permission_required">Allow drawing over other apps to use the overlay</string>
 
+    <!-- Quick Settings tile -->
+    <string name="tile_label">Translation Overlay</string>
+
+    <!-- Launcher shortcuts -->
+    <string name="shortcut_play_short">Play</string>
+    <string name="shortcut_play_long">Quick Launch</string>
+
     <!-- Common -->
     <string name="common_cancel">CANCEL</string>
 

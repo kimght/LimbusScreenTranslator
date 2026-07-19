@@ -21,7 +21,7 @@ import com.kimght.limbusscreentranslator.core.i18n.localizedTo
 import com.kimght.limbusscreentranslator.data.datastore.SettingsRepository
 import com.kimght.limbusscreentranslator.data.datastore.Settings as AppSettings
 import com.kimght.limbusscreentranslator.feature.navigation.ManagerApp
-import com.kimght.limbusscreentranslator.overlay.OverlayService
+import com.kimght.limbusscreentranslator.overlay.OverlayLauncher
 import com.kimght.limbusscreentranslator.ui.theme.LimbusScreenTranslatorTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -35,6 +35,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var settings: SettingsRepository
 
+    @Inject
+    lateinit var overlayLauncher: OverlayLauncher
+
     @Volatile
     private var currentLanguage: String = AppSettings.defaultUiLanguage()
 
@@ -42,7 +45,7 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.StartActivityForResult(),
     ) {
         if (Settings.canDrawOverlays(this)) {
-            OverlayService.start(this)
+            lifecycleScope.launch { overlayLauncher.start() }
         } else {
             Toast.makeText(
                 this,
@@ -73,7 +76,7 @@ class MainActivity : ComponentActivity() {
                 ProvideUiLanguage(language) {
                     ManagerApp(
                         onOpenOverlay = ::launchOverlay,
-                        onCloseOverlay = { OverlayService.stop(this) },
+                        onCloseOverlay = { overlayLauncher.stop() },
                     )
                 }
             }
@@ -95,7 +98,7 @@ class MainActivity : ComponentActivity() {
 
     private fun startOverlayService() {
         if (Settings.canDrawOverlays(this)) {
-            OverlayService.start(this)
+            lifecycleScope.launch { overlayLauncher.start() }
         } else {
             overlayPermissionLauncher.launch(
                 Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, "package:$packageName".toUri()),

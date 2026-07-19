@@ -29,6 +29,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.composables.icons.lucide.ChevronLeft
 import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Play
+import com.composables.icons.lucide.X
 import com.kimght.limbusscreentranslator.R
 import com.kimght.limbusscreentranslator.core.designsystem.FlagChip
 import com.kimght.limbusscreentranslator.core.designsystem.GoldButton
@@ -54,6 +56,8 @@ import com.kimght.limbusscreentranslator.ui.theme.MonoFontFamily
 fun DetailScreen(
     onBack: () -> Unit,
     onUninstalled: () -> Unit,
+    onOpenOverlay: () -> Unit,
+    onCloseOverlay: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DetailViewModel = hiltViewModel(),
 ) {
@@ -64,6 +68,8 @@ fun DetailScreen(
         onInstall = viewModel::install,
         onSetActive = viewModel::setActive,
         onUninstall = { viewModel.uninstall(onComplete = onUninstalled) },
+        onOpenOverlay = onOpenOverlay,
+        onCloseOverlay = onCloseOverlay,
         modifier = modifier,
     )
 }
@@ -75,6 +81,8 @@ private fun DetailContent(
     onInstall: () -> Unit,
     onSetActive: () -> Unit,
     onUninstall: () -> Unit,
+    onOpenOverlay: () -> Unit,
+    onCloseOverlay: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -153,8 +161,11 @@ private fun DetailContent(
                 ActionRow(
                     status = state.status,
                     installing = state.installPercent != null,
+                    overlayRunning = state.overlayRunning,
                     onInstall = onInstall,
                     onSetActive = onSetActive,
+                    onOpenOverlay = onOpenOverlay,
+                    onCloseOverlay = onCloseOverlay,
                 )
                 val canUninstall = state.status in setOf(
                     LocalizationStatus.INSTALLED,
@@ -236,8 +247,11 @@ private fun MetaCell(label: String, value: String, modifier: Modifier = Modifier
 private fun ActionRow(
     status: LocalizationStatus,
     installing: Boolean,
+    overlayRunning: Boolean,
     onInstall: () -> Unit,
     onSetActive: () -> Unit,
+    onOpenOverlay: () -> Unit,
+    onCloseOverlay: () -> Unit,
 ) {
     if (installing) return
     when (status) {
@@ -258,7 +272,22 @@ private fun ActionRow(
                 accent = Limbus300,
             )
 
-        LocalizationStatus.ACTIVE,
+        LocalizationStatus.ACTIVE ->
+            GoldButton(
+                text = stringResource(
+                    if (overlayRunning) R.string.home_close_overlay else R.string.home_open_overlay,
+                ),
+                onClick = if (overlayRunning) onCloseOverlay else onOpenOverlay,
+                leading = { color ->
+                    Icon(
+                        imageVector = if (overlayRunning) Lucide.X else Lucide.Play,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = color,
+                    )
+                },
+            )
+
         LocalizationStatus.INSTALLING -> Unit
     }
 }

@@ -334,11 +334,11 @@ class LocalizationRepositoryTest {
         val installing = async {
             runCatching { repo.install(localization(), "Github", chaptersUrl = null) }
         }
-        yield()
-        assertTrue(repo.isInstalling(githubKey))
+
+        while (!repo.isInstalling(githubKey)) yield()
 
         repo.uninstall(githubKey)
-        gate.complete(Unit) // too late — the pipeline was cancelled and joined
+        gate.complete(Unit)
 
         assertTrue(installing.await().exceptionOrNull() is CancellationException)
         assertTrue(repo.installedPacks.first().isEmpty())
@@ -372,8 +372,52 @@ class LocalizationRepositoryTest {
         val githubListings = repo.listings(listOf(localization()), "Github").first()
         val mirrorListings = repo.listings(listOf(localization()), "Mirror").first()
 
-        assertEquals(LocalizationStatus.INSTALLED, githubListings[0].status)
+        assertEquals(LocalizationStatus.ACTIVE, githubListings[0].status)
         assertEquals(githubKey, githubListings[0].packKey)
         assertEquals(LocalizationStatus.NOT_INSTALLED, mirrorListings[0].status)
+    }
+
+    @Test
+    fun `fresh install becomes the active localization`() = runTest {
+        repo.install(localization(), "Github", chaptersUrl = null)
+
+        assertEquals(githubKey, settings.settings.first().activeLocalizationId)
+    }
+
+    @Test
+    fun `a second fresh install takes over the active slot`() = runTest {
+        repo.install(localization(), "Github", chaptersUrl = null)
+        repo.install(localization(), "Mirror", chaptersUrl = null)
+
+        assertEquals(
+            PackKey.of("Mirror", "ru-mtl"),
+            settings.settings.first().activeLocalizationId,
+        )
+    }
+
+    @Test
+    fun `updating an installed pack does not steal the active slot`() = runTest {
+        repo.install(localization(), "Github", chaptersUrl = null)
+        repo.install(localization(), "Mirror", chaptersUrl = null)
+
+        repo.install(localization().copy(version = "v2"), "Github", chaptersUrl = null)
+
+        assertEquals(
+            PackKey.of("Mirror", "ru-mtl"),
+            settings.settings.first().activeLocalizationId,
+        )
+    }
+
+    @Test
+    fun `a failed install does not activate anything`() = runTest {
+        buildRepo(object : Downloader {
+            override suspend fun download(url: String, dest: File, onProgress: (Long) -> Unit): Long {
+                throw java.io.IOException("network down")
+            }
+        })
+
+        runCatching { repo.install(localization(), "Github", chaptersUrl = null) }
+
+        assertNull(settings.settings.first().activeLocalizationId)
     }
 }

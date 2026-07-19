@@ -12,6 +12,11 @@
     <!-- Foreground-service notification on Android 13+. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Detect whether the game is installed so the Play shortcut can launch it. -->
+    <queries>
+        <package android:name="com.ProjectMoon.LimbusCompany" />
+    </queries>
+
     <application
         android:name=".App"
         android:allowBackup="true"
@@ -33,7 +38,18 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
+
+        <activity
+            android:name=".QuickLaunchActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.LimbusScreenTranslator.Translucent" />
 
         <service
             android:name=".overlay.OverlayService"
@@ -42,6 +58,17 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="translation_overlay_over_game" />
+        </service>
+
+        <service
+            android:name=".overlay.OverlayTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_tile_overlay"
+            android:label="@string/tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
         </service>
     </application>
 

@@ -5,6 +5,13 @@
     <string name="overlay_notification_text">Нажмите, чтобы открыть Limbus Screen Translator</string>
     <string name="overlay_permission_required">Разрешите отображение поверх других приложений, чтобы использовать плавающее окно</string>
 
+    <!-- Quick Settings tile -->
+    <string name="tile_label">Переводчик</string>
+
+    <!-- Launcher shortcuts -->
+    <string name="shortcut_play_short">Играть</string>
+    <string name="shortcut_play_long">Быстрый запуск</string>
+
     <!-- Common -->
     <string name="common_cancel">ОТМЕНА</string>
 
