@@ -17,6 +17,7 @@ internal fun overlayWindowLayoutParams(): WindowManager.LayoutParams =
         PixelFormat.TRANSLUCENT,
     ).apply {
         gravity = Gravity.TOP or Gravity.START
+        disableMoveAnimation()
         layoutInDisplayCutoutMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
         } else {
@@ -26,3 +27,17 @@ internal fun overlayWindowLayoutParams(): WindowManager.LayoutParams =
             fitInsetsTypes = 0
         }
     }
+
+private fun WindowManager.LayoutParams.disableMoveAnimation() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        setCanPlayMoveAnimation(false)
+    } else {
+        runCatching {
+            val field = WindowManager.LayoutParams::class.java.getField("privateFlags")
+            field.setInt(this, field.getInt(this) or PRIVATE_FLAG_NO_MOVE_ANIMATION)
+        }
+    }
+}
+
+private const val PRIVATE_FLAG_NO_MOVE_ANIMATION = 0x00000040
+

@@ -9,10 +9,14 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.Point
+import android.hardware.display.DisplayManager
 import android.os.Build
 import android.os.IBinder
 import android.provider.Settings
+import android.view.Display
+import android.view.Surface
 import android.view.WindowManager
+import androidx.core.view.WindowInsetsCompat
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.ComposeView
@@ -29,6 +33,7 @@ import com.kimght.LimbusScreenTranslator.data.repository.LocalizationRepository
 import com.kimght.LimbusScreenTranslator.data.repository.OverlayStateRepository
 import com.kimght.LimbusScreenTranslator.data.repository.ScenarioRepository
 import com.kimght.LimbusScreenTranslator.overlay.ui.OVERLAY_CHROME_DP
+import com.kimght.LimbusScreenTranslator.overlay.ui.OVERLAY_MINIMIZED_SIZE_DP
 import com.kimght.LimbusScreenTranslator.overlay.ui.OverlayActions
 import com.kimght.LimbusScreenTranslator.overlay.ui.OverlayRoot
 import com.kimght.LimbusScreenTranslator.ui.theme.LimbusScreenTranslatorTheme
@@ -103,11 +108,14 @@ class OverlayService : Service() {
                     ui.overlayWidth != lastWidth || ui.overlayContentHeight != lastHeight
                 lastWidth = ui.overlayWidth
                 lastHeight = ui.overlayContentHeight
-                if (minimizedChanged || (!ui.minimized && sizeChanged)) applyWindowSize(ui)
                 if (minimizedChanged) {
                     lastMinimized = ui.minimized
                     minimizedNow = ui.minimized
-                    applyPositionForState()
+                    applyWindowState(ui)
+                } else if (!ui.minimized && sizeChanged) {
+                    applySize(ui)
+                    clampNow()
+                    updateWindow()
                 }
             }
         }
@@ -170,27 +178,53 @@ class OverlayService : Service() {
         layoutParams.x += dx.roundToInt()
         layoutParams.y += dy.roundToInt()
         clampNow()
-        composeView?.let { runCatching { windowManager.updateViewLayout(it, layoutParams) } }
+        updateWindow()
     }
 
     private fun onDragEnd() {
         clampNow()
-        composeView?.let { runCatching { windowManager.updateViewLayout(it, layoutParams) } }
-        if (minimizedNow) controllerRef?.setMinimizedPositionFromService(
-            layoutParams.x,
-            layoutParams.y
+        updateWindow()
+        val size = viewSizePx(minimizedNow)
+        val center = topLeftToNaturalCenter(
+            layoutParams.x, layoutParams.y, size.x, size.y, displayFrame(),
         )
-        else controllerRef?.setPanelPosition(layoutParams.x, layoutParams.y)
+        if (minimizedNow) controllerRef?.setMinimizedPositionFromService(center.x, center.y)
+        else controllerRef?.setPanelPosition(center.x, center.y)
+    }
+
+    private fun viewSizePx(minimized: Boolean): Point {
+        if (!minimized) return Point(layoutParams.width, layoutParams.height)
+        val side = (OVERLAY_MINIMIZED_SIZE_DP * resources.displayMetrics.density).roundToInt()
+        return Point(side, side)
     }
 
     private fun clampNow() {
         val v = composeView ?: return
         val screen = realDisplaySize()
-        val w = if (v.width > 0) v.width else v.measuredWidth
-        val h = if (v.height > 0) v.height else v.measuredHeight
-        val clamped = clampToScreen(layoutParams.x, layoutParams.y, w, h, screen.x, screen.y)
+        val w = if (layoutParams.width > 0) layoutParams.width
+        else if (v.width > 0) v.width else v.measuredWidth
+        val h = if (layoutParams.height > 0) layoutParams.height
+        else if (v.height > 0) v.height else v.measuredHeight
+        val clamped = clampToScreen(
+            layoutParams.x, layoutParams.y, w, h, screen.x, screen.y, statusBarInsets(),
+        )
         layoutParams.x = clamped.x
         layoutParams.y = clamped.y
+    }
+
+    private fun statusBarInsets(): ScreenInsets {
+        val view = composeView ?: return ScreenInsets.NONE
+        val root = view.rootWindowInsets ?: return ScreenInsets.NONE
+        val insets = WindowInsetsCompat.toWindowInsetsCompat(root, view)
+            .getInsets(WindowInsetsCompat.Type.statusBars())
+        return ScreenInsets(insets.left, insets.top, insets.right, insets.bottom)
+    }
+
+    private fun displayFrame(): DisplayFrame {
+        val size = realDisplaySize()
+        val rotation = getSystemService(DisplayManager::class.java)
+            ?.getDisplay(Display.DEFAULT_DISPLAY)?.rotation ?: Surface.ROTATION_0
+        return DisplayFrame(rotation, size.x, size.y)
     }
 
     private fun realDisplaySize(): Point =
@@ -202,41 +236,39 @@ class OverlayService : Service() {
             Point().also { windowManager.defaultDisplay.getRealSize(it) }
         }
 
-    private fun applyWindowSize(ui: OverlayUiState) {
-        val view = composeView ?: return
+    private suspend fun applyWindowState(ui: OverlayUiState) {
+        val prefs = settings.settings.first()
+        applySize(ui)
+        val x = if (ui.minimized) prefs.minimizedX else prefs.panelX
+        val y = if (ui.minimized) prefs.minimizedY else prefs.panelY
+        if (x != null && y != null) {
+            val size = viewSizePx(ui.minimized)
+            val topLeft = naturalCenterToTopLeft(
+                ScreenPosition(x, y), size.x, size.y, displayFrame(),
+            )
+            layoutParams.x = topLeft.x
+            layoutParams.y = topLeft.y
+        } else {
+            defaultPlacement()
+        }
+        clampNow()
+        updateWindow()
+    }
+
+    private fun applySize(ui: OverlayUiState) {
         if (ui.minimized) {
             layoutParams.width = WindowManager.LayoutParams.WRAP_CONTENT
             layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT
         } else {
             val density = resources.displayMetrics.density
-            val screen = realDisplaySize()
-            val widthPx = (ui.overlayWidth * density).roundToInt()
-            val heightPx = ((ui.overlayContentHeight + OVERLAY_CHROME_DP) * density).roundToInt()
-            layoutParams.width = widthPx
-            layoutParams.height = heightPx
-            val clamped = clampToScreen(
-                layoutParams.x, layoutParams.y, widthPx, heightPx, screen.x, screen.y,
-            )
-            layoutParams.x = clamped.x
-            layoutParams.y = clamped.y
+            layoutParams.width = (ui.overlayWidth * density).roundToInt()
+            layoutParams.height =
+                ((ui.overlayContentHeight + OVERLAY_CHROME_DP) * density).roundToInt()
         }
-        runCatching { windowManager.updateViewLayout(view, layoutParams) }
     }
 
-    private fun applyPositionForState() {
-        scope.launch {
-            val prefs = settings.settings.first()
-            val x = if (minimizedNow) prefs.minimizedX else prefs.panelX
-            val y = if (minimizedNow) prefs.minimizedY else prefs.panelY
-            if (x != null && y != null) {
-                layoutParams.x = x
-                layoutParams.y = y
-            } else {
-                defaultPlacement()
-            }
-            clampNow()
-            composeView?.let { runCatching { windowManager.updateViewLayout(it, layoutParams) } }
-        }
+    private fun updateWindow() {
+        composeView?.let { runCatching { windowManager.updateViewLayout(it, layoutParams) } }
     }
 
     private fun defaultPlacement() {
@@ -252,9 +284,11 @@ class OverlayService : Service() {
         controllerRef?.setOrientation(
             newConfig.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT,
         )
+        // Stored positions are natural-frame, so re-applying them lands the
+        // overlay at the same physical spot in the new orientation.
         composeView?.post {
-            clampNow()
-            composeView?.let { runCatching { windowManager.updateViewLayout(it, layoutParams) } }
+            val controller = controllerRef ?: return@post
+            scope.launch { applyWindowState(controller.uiState.value) }
         }
     }
 

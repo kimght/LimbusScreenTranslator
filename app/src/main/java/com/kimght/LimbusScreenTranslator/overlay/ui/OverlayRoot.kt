@@ -117,6 +117,11 @@ private const val HEADER_HEIGHT_DP = 34
 private val HeaderHeight = HEADER_HEIGHT_DP.dp
 internal const val OVERLAY_CHROME_DP = HEADER_HEIGHT_DP + 8 + 10
 private val OverlayChrome = OVERLAY_CHROME_DP.dp
+private const val MINIMIZED_ICON_DP = 46
+private const val MINIMIZED_PADDING_DP = 6
+// The WRAP_CONTENT window size of MinimizedIcon; the service uses it for
+// center-anchored positioning before the bubble has been laid out.
+internal const val OVERLAY_MINIMIZED_SIZE_DP = MINIMIZED_ICON_DP + 2 * MINIMIZED_PADDING_DP
 
 @Composable
 fun OverlayRoot(stateFlow: StateFlow<OverlayUiState>, actions: OverlayActions) {
@@ -741,10 +746,10 @@ private fun MinimizedIcon(state: OverlayUiState, actions: OverlayActions) {
         hintNonce = 0
     }
     val active = !state.portrait
-    Box(Modifier.padding(6.dp)) {
+    Box(Modifier.padding(MINIMIZED_PADDING_DP.dp)) {
         Box(
             Modifier
-                .size(46.dp)
+                .size(MINIMIZED_ICON_DP.dp)
                 .clip(CircleShape)
                 .background(BgBackground.copy(alpha = 0.95f))
                 .border(1.dp, Limbus300.copy(alpha = if (active) 0.55f else 0.25f), CircleShape)
