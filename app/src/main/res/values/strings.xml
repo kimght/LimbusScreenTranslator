@@ -109,6 +109,9 @@
     <string name="overlay_no_active">No localization is active.\nOpen the app to install and activate one.</string>
     <string name="overlay_episode_unavailable">This episode isn&#x2019;t in the installed pack.</string>
     <string name="overlay_pick_episode">Open chapter select to choose an episode.</string>
+    <string name="overlay_chapters_unavailable">Couldn\'t load the chapter list.\nCheck your connection and retry.</string>
+    <string name="overlay_retry">RETRY</string>
+    <string name="overlay_retrying">SYNCING…</string>
     <plurals name="overlay_episode_count">
         <item quantity="one">%1$d EPISODE</item>
         <item quantity="other">%1$d EPISODES</item>

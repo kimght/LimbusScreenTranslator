@@ -13,6 +13,8 @@ import com.kimght.limbusscreentranslator.data.install.PackInstaller
 import com.kimght.limbusscreentranslator.data.install.RoomPackContentWriter
 import com.kimght.limbusscreentranslator.data.network.Downloader
 import com.kimght.limbusscreentranslator.data.network.LocalizationApi
+import com.kimght.limbusscreentranslator.data.repository.CatalogFetcher
+import com.kimght.limbusscreentranslator.data.repository.ChapterSyncCoordinator
 import com.kimght.limbusscreentranslator.domain.model.Localization
 import com.kimght.limbusscreentranslator.domain.model.LocalizationStatus
 import com.kimght.limbusscreentranslator.domain.model.PackFormat
@@ -103,15 +105,16 @@ class LocalizationRepositoryTest {
         settings = SettingsRepository(dataStore)
         scenarios = ScenarioRepository(db, db.scenarioDao(), db.chapterDao(), api)
         sources = SourceRepository(db.sourceDao(), settings)
+        val catalogFetcher = CatalogFetcher(api, CatalogCache(now = { nowMs }))
         repo = LocalizationRepository(
-            api = api,
+            catalogFetcher = catalogFetcher,
             installedPackDao = db.installedPackDao(),
             installManager = installManager,
             settings = settings,
             contentWriter = writer,
             scenarios = scenarios,
             sources = sources,
-            catalogCache = CatalogCache(now = { nowMs }),
+            chapterSync = ChapterSyncCoordinator(catalogFetcher, sources, scenarios, now = { nowMs }),
         )
     }
 

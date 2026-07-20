@@ -109,6 +109,7 @@ class OverlayActions(
     val onLineSettled: (Int) -> Unit,
     val onDrag: (Float, Float) -> Unit,
     val onDragEnd: () -> Unit,
+    val onRetryChapters: () -> Unit,
 )
 
 private val PanelBorder = Limbus300.copy(alpha = 0.34f)
@@ -338,7 +339,20 @@ private fun ChapterContent(
             Box(Modifier
                 .weight(1f)
                 .fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Placeholder(stringResource(emptyDialogueMessageRes(state)))
+                if (state.noActiveLocalization) {
+                    Placeholder(stringResource(R.string.overlay_no_active))
+                } else {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Placeholder(stringResource(R.string.overlay_chapters_unavailable))
+                        RetryChaptersButton(
+                            syncing = state.chapterSyncing,
+                            onRetry = actions.onRetryChapters,
+                        )
+                    }
+                }
             }
             return@Column
         }
@@ -413,6 +427,31 @@ private fun NavButton(
             fontSize = 11.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun RetryChaptersButton(syncing: Boolean, onRetry: () -> Unit) {
+    Box(
+        Modifier
+            .clip(RoundedCornerShape(2.dp))
+            .background(Limbus300.copy(alpha = 0.07f))
+            .border(
+                1.dp,
+                if (syncing) Hairline else Limbus300.copy(alpha = 0.4f),
+                RoundedCornerShape(2.dp),
+            )
+            .then(if (syncing) Modifier else Modifier.clickable(onClick = onRetry))
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            stringResource(if (syncing) R.string.overlay_retrying else R.string.overlay_retry),
+            color = if (syncing) Limbus600 else Limbus300,
+            fontSize = 10.sp,
+            letterSpacing = 1.4.sp,
+            fontWeight = FontWeight.Medium,
         )
     }
 }

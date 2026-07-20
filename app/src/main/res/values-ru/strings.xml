@@ -107,6 +107,9 @@
     <string name="overlay_no_active">Нет активной локализации.\nОткройте приложение, чтобы установить и активировать её.</string>
     <string name="overlay_episode_unavailable">Этого эпизода нет в установленном паке.</string>
     <string name="overlay_pick_episode">Откройте выбор главы, чтобы выбрать эпизод.</string>
+    <string name="overlay_chapters_unavailable">Не удалось загрузить список глав.\nПроверьте подключение и повторите.</string>
+    <string name="overlay_retry">ПОВТОРИТЬ</string>
+    <string name="overlay_retrying">СИНХРОНИЗАЦИЯ…</string>
     <plurals name="overlay_episode_count">
         <item quantity="one">%1$d ЭПИЗОД</item>
         <item quantity="few">%1$d ЭПИЗОДА</item>

@@ -18,6 +18,8 @@ import com.kimght.limbusscreentranslator.data.install.ScenarioContent
 import com.kimght.limbusscreentranslator.data.network.Downloader
 import com.kimght.limbusscreentranslator.data.network.LocalizationApi
 import com.kimght.limbusscreentranslator.data.repository.CatalogCache
+import com.kimght.limbusscreentranslator.data.repository.CatalogFetcher
+import com.kimght.limbusscreentranslator.data.repository.ChapterSyncCoordinator
 import com.kimght.limbusscreentranslator.data.repository.LocalizationRepository
 import com.kimght.limbusscreentranslator.data.repository.OverlayStateRepository
 import com.kimght.limbusscreentranslator.data.repository.ScenarioRepository
@@ -32,6 +34,10 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
+import okhttp3.mockwebserver.Dispatcher
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -44,6 +50,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.File
 import java.nio.file.Files
+import java.util.concurrent.CountDownLatch
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
@@ -56,6 +63,9 @@ class OverlayControllerTest {
     private lateinit var localizations: LocalizationRepository
     private lateinit var scenarios: ScenarioRepository
     private lateinit var overlayState: OverlayStateRepository
+    private lateinit var server: MockWebServer
+    private lateinit var sources: SourceRepository
+    private lateinit var chapterSync: ChapterSyncCoordinator
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
 
     private class NoopDownloader : Downloader {
@@ -85,15 +95,19 @@ class OverlayControllerTest {
         )
         settings = SettingsRepository(dataStore)
         scenarios = ScenarioRepository(db, db.scenarioDao(), db.chapterDao(), api)
+        server = MockWebServer().also { it.start() }
+        sources = SourceRepository(db.sourceDao(), settings)
+        val catalogFetcher = CatalogFetcher(api, CatalogCache())
+        chapterSync = ChapterSyncCoordinator(catalogFetcher, sources, scenarios, now = { 0L })
         localizations = LocalizationRepository(
-            api = api,
+            catalogFetcher = catalogFetcher,
             installedPackDao = db.installedPackDao(),
             installManager = installManager,
             settings = settings,
             contentWriter = writer,
             scenarios = scenarios,
-            sources = SourceRepository(db.sourceDao(), settings),
-            catalogCache = CatalogCache(),
+            sources = sources,
+            chapterSync = chapterSync,
         )
         overlayState = OverlayStateRepository(db.overlayStateDao(), clock = { 42L })
     }
@@ -104,7 +118,11 @@ class OverlayControllerTest {
         cacheRoot.deleteRecursively()
         settingsDir.deleteRecursively()
         appScope.cancel()
+        server.shutdown()
     }
+
+    private fun newController(scope: CoroutineScope) =
+        OverlayController(settings, localizations, scenarios, overlayState, chapterSync, scope)
 
     private suspend fun app.cash.turbine.ReceiveTurbine<OverlayUiState>.awaitFirst(
         limit: Int = 10,
@@ -119,7 +137,7 @@ class OverlayControllerTest {
 
     @Test
     fun `setOrientation portrait forces minimized`() = runTest {
-        val controller = OverlayController(settings, localizations, scenarios, overlayState, backgroundScope)
+        val controller = newController(backgroundScope)
         controller.setOrientation(true)
         controller.uiState.test {
             val found = awaitFirst { it.minimized }
@@ -130,7 +148,7 @@ class OverlayControllerTest {
 
     @Test
     fun `setOrientation portrait clears resizing`() = runTest {
-        val controller = OverlayController(settings, localizations, scenarios, overlayState, backgroundScope)
+        val controller = newController(backgroundScope)
         controller.uiState.test {
             controller.selectMode(OverlayMode.RESIZE)
             val entered = awaitFirst { it.resizing }
@@ -145,7 +163,7 @@ class OverlayControllerTest {
 
     @Test
     fun `uiState reflects orientation`() = runTest {
-        val controller = OverlayController(settings, localizations, scenarios, overlayState, backgroundScope)
+        val controller = newController(backgroundScope)
         controller.uiState.test {
             controller.setOrientation(true)
             val portrait = awaitFirst { it.portrait }
@@ -159,7 +177,7 @@ class OverlayControllerTest {
 
     @Test
     fun `restore is no-op while portrait`() = runTest {
-        val controller = OverlayController(settings, localizations, scenarios, overlayState, backgroundScope)
+        val controller = newController(backgroundScope)
         controller.setOrientation(true)
         controller.restore()
         controller.uiState.test {
@@ -171,7 +189,7 @@ class OverlayControllerTest {
 
     @Test
     fun `resize drag-end keeps the draft live for further drags`() = runTest {
-        val controller = OverlayController(settings, localizations, scenarios, overlayState, backgroundScope)
+        val controller = newController(backgroundScope)
         controller.uiState.test {
             controller.selectMode(OverlayMode.RESIZE)
             assertTrue("Expected resizing=true", awaitFirst { it.resizing } != null)
@@ -190,7 +208,7 @@ class OverlayControllerTest {
 
     @Test
     fun `sub-dp resize deltas accumulate instead of being truncated`() = runTest {
-        val controller = OverlayController(settings, localizations, scenarios, overlayState, backgroundScope)
+        val controller = newController(backgroundScope)
         controller.uiState.test {
             controller.selectMode(OverlayMode.RESIZE)
             assertTrue("Expected resizing=true", awaitFirst { it.resizing } != null)
@@ -207,7 +225,7 @@ class OverlayControllerTest {
 
     @Test
     fun `minimize commits an in-progress resize`() = runTest {
-        val controller = OverlayController(settings, localizations, scenarios, overlayState, backgroundScope)
+        val controller = newController(backgroundScope)
         controller.uiState.test {
             controller.selectMode(OverlayMode.RESIZE)
             assertTrue("Expected resizing=true", awaitFirst { it.resizing } != null)
@@ -222,7 +240,7 @@ class OverlayControllerTest {
 
     @Test
     fun `selecting another section from resize commits the draft`() = runTest {
-        val controller = OverlayController(settings, localizations, scenarios, overlayState, backgroundScope)
+        val controller = newController(backgroundScope)
         controller.uiState.test {
             controller.selectMode(OverlayMode.RESIZE)
             assertTrue("Expected resizing=true", awaitFirst { it.resizing } != null)
@@ -241,7 +259,7 @@ class OverlayControllerTest {
 
     @Test
     fun `re-selecting the active section keeps the resize session alive`() = runTest {
-        val controller = OverlayController(settings, localizations, scenarios, overlayState, backgroundScope)
+        val controller = newController(backgroundScope)
         controller.uiState.test {
             controller.selectMode(OverlayMode.RESIZE)
             assertTrue("Expected resizing=true", awaitFirst { it.resizing } != null)
@@ -256,7 +274,7 @@ class OverlayControllerTest {
         }
     }
 
-    private suspend fun seedActivePackWithChapters() {
+    private suspend fun seedActivePack() {
         RoomPackContentWriter(db).replacePack(
             InstalledPack(
                 id = "ru-mtl",
@@ -276,6 +294,11 @@ class OverlayControllerTest {
                 ),
             ),
         )
+        settings.setActiveLocalizationId(PackKey.of("Github", "ru-mtl"))
+    }
+
+    private suspend fun seedActivePackWithChapters() {
+        seedActivePack()
         db.chapterDao().insertChapters(
             listOf(ChapterEntity(sourceName = "Github", position = 0, name = "CANTO VII", subtitle = "s")),
         )
@@ -284,13 +307,83 @@ class OverlayControllerTest {
                 ChapterEpisodeEntity(sourceName = "Github", chapterPosition = 0, position = 0, episodeCode = "7-1"),
             ),
         )
-        settings.setActiveLocalizationId(PackKey.of("Github", "ru-mtl"))
+    }
+
+    private fun manifestJson() =
+        """{"localizations":[{"id":"ru-mtl","version":"v1"}],""" +
+            """"chapters_url":"${server.url("/chapters.json")}"}"""
+
+    private val chaptersJson =
+        """{"chapters":[{"name":"CANTO VII","subtitle":"s","episodes":["7-1"]}]}"""
+
+    @Test
+    fun `chapter list updates live while the overlay is open`() = runTest {
+        seedActivePackWithChapters()
+        val controller = newController(backgroundScope)
+        controller.uiState.test {
+            assertTrue("Expected seeded chapters", awaitFirst { it.chapters.isNotEmpty() } != null)
+
+            db.chapterDao().insertChapters(
+                listOf(ChapterEntity(sourceName = "Github", position = 1, name = "CANTO VIII", subtitle = "s")),
+            )
+
+            val updated = awaitFirst(limit = 20) { st -> st.chapters.any { it.name == "CANTO VIII" } }
+            assertTrue("Expected new chapter to appear without reopening the overlay", updated != null)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `retryChapterSync fetches the chapter list for the active source`() = runTest {
+        seedActivePack()
+        sources.addSource("Github", server.url("/localizations.json").toString())
+        server.enqueue(MockResponse().setBody(manifestJson()))
+        server.enqueue(MockResponse().setBody(chaptersJson))
+        val controller = newController(backgroundScope)
+        controller.uiState.test {
+            assertTrue(awaitFirst { it.present && !it.noActiveLocalization } != null)
+
+            controller.retryChapterSync()
+
+            val loaded = awaitFirst(limit = 20) { it.chapters.isNotEmpty() }
+            assertTrue("Expected chapters after retryChapterSync()", loaded != null)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `chapterSyncing tracks the active source sync`() = runTest {
+        seedActivePack()
+        sources.addSource("Github", server.url("/localizations.json").toString())
+        val release = CountDownLatch(1)
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse =
+                if (request.path!!.endsWith("localizations.json")) {
+                    MockResponse().setBody(manifestJson())
+                } else {
+                    release.await()
+                    MockResponse().setBody(chaptersJson)
+                }
+        }
+        val controller = newController(backgroundScope)
+        controller.uiState.test {
+            assertTrue(awaitFirst { it.present && !it.chapterSyncing } != null)
+
+            controller.retryChapterSync()
+            val syncing = awaitFirst(limit = 20) { it.chapterSyncing }
+            assertTrue("Expected chapterSyncing=true while the fetch is gated", syncing != null)
+
+            release.countDown()
+            val done = awaitFirst(limit = 20) { !it.chapterSyncing && it.chapters.isNotEmpty() }
+            assertTrue("Expected sync to finish and chapters to land", done != null)
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
     @Test
     fun `resize frames reuse the chapter model instead of rebuilding it`() = runTest {
         seedActivePackWithChapters()
-        val controller = OverlayController(settings, localizations, scenarios, overlayState, backgroundScope)
+        val controller = newController(backgroundScope)
         controller.uiState.test {
             controller.selectMode(OverlayMode.RESIZE)
             val before = awaitFirst { it.resizing && it.chapters.isNotEmpty() }
@@ -311,7 +404,7 @@ class OverlayControllerTest {
 
     @Test
     fun `restore works after landscape`() = runTest {
-        val controller = OverlayController(settings, localizations, scenarios, overlayState, backgroundScope)
+        val controller = newController(backgroundScope)
         controller.setOrientation(true)
         controller.setOrientation(false)
         controller.restore()

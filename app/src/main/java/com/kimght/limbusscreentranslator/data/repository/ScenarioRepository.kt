@@ -12,6 +12,8 @@ import com.kimght.limbusscreentranslator.domain.model.DialogueLine
 import com.kimght.limbusscreentranslator.domain.model.Episode
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 
 class EpisodeUnavailableException(val episodeCode: String) :
     Exception("No scenario data for episode $episodeCode")
@@ -66,15 +68,26 @@ class ScenarioRepository @Inject constructor(
         }
     }
 
-    suspend fun chapters(sourceName: String): List<Chapter> {
-        val chapterRows = chapterDao.chaptersFor(sourceName)
-        val episodeRows = chapterDao.episodesFor(sourceName).groupBy { it.chapterPosition }
+    fun observeChapters(sourceName: String): Flow<List<Chapter>> = combine(
+        chapterDao.observeChaptersFor(sourceName),
+        chapterDao.observeEpisodesFor(sourceName),
+        ::mapChapters,
+    )
+
+    suspend fun chapters(sourceName: String): List<Chapter> =
+        mapChapters(chapterDao.chaptersFor(sourceName), chapterDao.episodesFor(sourceName))
+
+    private fun mapChapters(
+        chapterRows: List<ChapterEntity>,
+        episodeRows: List<ChapterEpisodeEntity>,
+    ): List<Chapter> {
+        val grouped = episodeRows.groupBy { it.chapterPosition }
         return chapterRows.map { chapter ->
             Chapter(
                 position = chapter.position,
                 name = chapter.name,
                 subtitle = chapter.subtitle,
-                episodes = episodeRows[chapter.position]
+                episodes = grouped[chapter.position]
                     .orEmpty()
                     .map { Episode(code = it.episodeCode, position = it.position) },
             )

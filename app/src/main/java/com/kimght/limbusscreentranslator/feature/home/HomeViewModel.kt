@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kimght.limbusscreentranslator.data.datastore.SettingsRepository
 import com.kimght.limbusscreentranslator.data.install.InstallState
+import com.kimght.limbusscreentranslator.data.repository.ChapterSyncCoordinator
 import com.kimght.limbusscreentranslator.data.repository.LocalizationRepository
 import com.kimght.limbusscreentranslator.data.repository.SourceRepository
 import com.kimght.limbusscreentranslator.domain.model.Localization
@@ -47,6 +48,7 @@ class HomeViewModel @Inject constructor(
     private val localizationRepository: LocalizationRepository,
     private val sourceRepository: SourceRepository,
     private val settings: SettingsRepository,
+    private val chapterSync: ChapterSyncCoordinator,
     overlayRunningState: OverlayRunningState,
 ) : ViewModel() {
     private val catalogs = MutableStateFlow<Map<String, Map<String, Localization>>>(emptyMap())
@@ -101,6 +103,10 @@ class HomeViewModel @Inject constructor(
                     catalog.localizations.associateBy { it.id }
                 }
                 chapterUrls.value = fetched.mapValues { (_, catalog) -> catalog.chaptersUrl }
+                fetched.forEach { (sourceName, catalog) ->
+                    val chaptersUrl = catalog.chaptersUrl?.takeIf { it.isNotBlank() } ?: return@forEach
+                    viewModelScope.launch { chapterSync.sync(sourceName, chaptersUrl) }
+                }
             }
         }
     }

@@ -5,22 +5,16 @@ import com.kimght.limbusscreentranslator.data.db.dao.InstalledPackDao
 import com.kimght.limbusscreentranslator.data.install.InstallManager
 import com.kimght.limbusscreentranslator.data.install.InstallState
 import com.kimght.limbusscreentranslator.data.install.PackContentWriter
-import com.kimght.limbusscreentranslator.data.network.LocalizationApi
-import com.kimght.limbusscreentranslator.data.network.dto.LocalizationDto
 import com.kimght.limbusscreentranslator.domain.model.InstalledPack
 import com.kimght.limbusscreentranslator.domain.model.Localization
 import com.kimght.limbusscreentranslator.domain.model.LocalizationStatus
-import com.kimght.limbusscreentranslator.domain.model.PackFormat
 import com.kimght.limbusscreentranslator.domain.model.PackKey
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.time.Duration.Companion.milliseconds
 
 data class LocalizationListing(
     val localization: Localization,
@@ -36,14 +30,14 @@ data class Catalog(
 
 @Singleton
 class LocalizationRepository @Inject constructor(
-    private val api: LocalizationApi,
+    private val catalogFetcher: CatalogFetcher,
     private val installedPackDao: InstalledPackDao,
     private val installManager: InstallManager,
     private val settings: SettingsRepository,
     private val contentWriter: PackContentWriter,
     private val scenarios: ScenarioRepository,
     private val sources: SourceRepository,
-    private val catalogCache: CatalogCache,
+    private val chapterSync: ChapterSyncCoordinator,
 ) {
     val installedPacks: Flow<List<InstalledPack>> =
         installedPackDao.observeAll().map { list ->
@@ -66,16 +60,7 @@ class LocalizationRepository @Inject constructor(
 
     fun installState(id: String): InstallState = installManager.stateFor(id)
 
-    suspend fun fetchCatalog(manifestUrl: String): Catalog {
-        catalogCache.get(manifestUrl)?.let { return it }
-        val manifest = api.getManifest(manifestUrl)
-        return Catalog(
-            localizations = manifest.localizations
-                .filter { it.id.isNotBlank() }
-                .map { it.toDomain() },
-            chaptersUrl = manifest.chaptersUrl,
-        ).also { catalogCache.put(manifestUrl, it) }
-    }
+    suspend fun fetchCatalog(manifestUrl: String): Catalog = catalogFetcher.fetch(manifestUrl)
 
     fun listings(catalog: List<Localization>, sourceName: String): Flow<List<LocalizationListing>> =
         combine(
@@ -113,22 +98,9 @@ class LocalizationRepository @Inject constructor(
             settings.setActiveLocalizationId(key)
         }
         if (installed && !chaptersUrl.isNullOrBlank()) {
-            refreshChaptersWithRetry(sourceName, chaptersUrl)
+            chapterSync.sync(sourceName, chaptersUrl, force = true)
         }
         return installed
-    }
-
-    private suspend fun refreshChaptersWithRetry(sourceName: String, chaptersUrl: String) {
-        var delayMs = CHAPTER_REFRESH_INITIAL_BACKOFF_MS
-        repeat(CHAPTER_REFRESH_ATTEMPTS) { attempt ->
-            val result = runCatching { scenarios.refreshChapters(sourceName, chaptersUrl) }
-            if (result.isSuccess) return
-            result.exceptionOrNull()?.let { if (it is CancellationException) throw it }
-            if (attempt < CHAPTER_REFRESH_ATTEMPTS - 1) {
-                delay(delayMs.milliseconds)
-                delayMs *= 2
-            }
-        }
     }
 
     suspend fun setActive(key: String) = settings.setActiveLocalizationId(key)
@@ -167,22 +139,4 @@ class LocalizationRepository @Inject constructor(
         uninstallAll()
         sources.restoreDefaults()
     }
-
-    private companion object {
-        const val CHAPTER_REFRESH_ATTEMPTS = 3
-        const val CHAPTER_REFRESH_INITIAL_BACKOFF_MS = 500L
-    }
 }
-
-private fun LocalizationDto.toDomain(): Localization = Localization(
-    id = id,
-    version = version,
-    name = name,
-    flag = flag,
-    iconUrl = icon,
-    description = description,
-    authors = authors,
-    downloadUrl = url,
-    sizeBytes = size,
-    format = PackFormat.fromManifest(format),
-)

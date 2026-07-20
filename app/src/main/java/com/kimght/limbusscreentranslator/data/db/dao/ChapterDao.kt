@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.kimght.limbusscreentranslator.data.db.entity.ChapterEntity
 import com.kimght.limbusscreentranslator.data.db.entity.ChapterEpisodeEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ChapterDao {
@@ -36,4 +37,13 @@ interface ChapterDao {
                 "ORDER BY chapterPosition ASC, position ASC",
     )
     suspend fun episodesFor(sourceName: String): List<ChapterEpisodeEntity>
+
+    @Query("SELECT * FROM chapter WHERE sourceName = :sourceName ORDER BY position ASC")
+    fun observeChaptersFor(sourceName: String): Flow<List<ChapterEntity>>
+
+    @Query(
+        "SELECT * FROM chapter_episode WHERE sourceName = :sourceName " +
+                "ORDER BY chapterPosition ASC, position ASC",
+    )
+    fun observeEpisodesFor(sourceName: String): Flow<List<ChapterEpisodeEntity>>
 }

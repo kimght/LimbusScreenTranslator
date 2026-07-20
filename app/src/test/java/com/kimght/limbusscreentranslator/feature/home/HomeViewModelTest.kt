@@ -1,10 +1,9 @@
-package com.kimght.limbusscreentranslator.feature.detail
+package com.kimght.limbusscreentranslator.feature.home
 
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
-import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.kimght.limbusscreentranslator.data.datastore.SettingsRepository
@@ -31,10 +30,12 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -48,15 +49,17 @@ import java.nio.file.Files
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
-class DetailViewModelTest {
+class HomeViewModelTest {
 
     private lateinit var db: LimbusDatabase
     private lateinit var server: MockWebServer
     private lateinit var cacheRoot: File
     private lateinit var settingsDir: File
     private lateinit var settings: SettingsRepository
+    private lateinit var scenarios: ScenarioRepository
     private lateinit var sources: SourceRepository
     private lateinit var repo: LocalizationRepository
+    private lateinit var chapterSync: ChapterSyncCoordinator
     private lateinit var runningState: OverlayRunningState
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
 
@@ -86,9 +89,10 @@ class DetailViewModelTest {
             cacheRoot = cacheRoot,
             ioDispatcher = Dispatchers.Unconfined,
         )
-        val scenarios = ScenarioRepository(db, db.scenarioDao(), db.chapterDao(), api)
+        scenarios = ScenarioRepository(db, db.scenarioDao(), db.chapterDao(), api)
         sources = SourceRepository(db.sourceDao(), settings)
         val catalogFetcher = CatalogFetcher(api, CatalogCache(now = { 0L }))
+        chapterSync = ChapterSyncCoordinator(catalogFetcher, sources, scenarios, now = { 0L })
         repo = LocalizationRepository(
             catalogFetcher = catalogFetcher,
             installedPackDao = db.installedPackDao(),
@@ -97,7 +101,7 @@ class DetailViewModelTest {
             contentWriter = writer,
             scenarios = scenarios,
             sources = sources,
-            chapterSync = ChapterSyncCoordinator(catalogFetcher, sources, scenarios, now = { 0L }),
+            chapterSync = chapterSync,
         )
         runningState = OverlayRunningState()
     }
@@ -112,24 +116,40 @@ class DetailViewModelTest {
         appScope.cancel()
     }
 
+    private fun manifestJson() =
+        """{"localizations":[{"id":"ru-mtl","version":"v1"}],""" +
+            """"chapters_url":"${server.url("/chapters.json")}"}"""
+
     @Test
-    fun `overlay running state flows into the ui state`() = runTest {
-        server.enqueue(
-            MockResponse().setBody("""{"localizations":[{"id":"ru-mtl","version":"v1"}]}"""),
-        )
+    fun `refresh syncs the chapter list for sources with a chapters url`() = runTest {
         sources.addSource("Github", server.url("/localizations.json").toString())
-        val viewModel = DetailViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("sourceName" to "Github", "id" to "ru-mtl")),
-            localizationRepository = repo,
-            sourceRepository = sources,
-            settings = settings,
-            overlayRunningState = runningState,
+        server.enqueue(MockResponse().setBody(manifestJson()))
+        server.enqueue(
+            MockResponse().setBody(
+                """{"chapters":[{"name":"Canto I","subtitle":"s","episodes":["S001B"]}]}""",
+            ),
         )
 
-        val loaded = viewModel.uiState.first { it.localization != null }
-        assertFalse(loaded.overlayRunning)
+        HomeViewModel(repo, sources, settings, chapterSync, runningState)
 
-        runningState.set(true)
-        assertTrue(viewModel.uiState.first { it.overlayRunning }.overlayRunning)
+        val chapters = scenarios.observeChapters("Github").first { it.isNotEmpty() }
+        assertEquals("Canto I", chapters.single().name)
+        assertEquals(2, server.requestCount)
+    }
+
+    @Test
+    fun `a failing chapters url does not break the catalog refresh`() = runTest {
+        sources.addSource("Github", server.url("/localizations.json").toString())
+        server.enqueue(MockResponse().setBody(manifestJson()))
+        repeat(3) { server.enqueue(MockResponse().setResponseCode(500)) }
+
+        val viewModel = HomeViewModel(repo, sources, settings, chapterSync, runningState)
+
+        assertFalse(viewModel.uiState.first { !it.loading }.loading)
+        // 1 manifest request + 3 failed chapter attempts.
+        withContext(Dispatchers.Default) {
+            while (server.requestCount < 4) Thread.sleep(10)
+        }
+        assertTrue(scenarios.chapters("Github").isEmpty())
     }
 }

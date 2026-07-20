@@ -54,6 +54,7 @@ data class OverlayUiState(
     val nextEpisode: EpisodeShortcut? = null,
     val totalEpisodes: Int = 0,
     val chapterSourceName: String? = null,
+    val chapterSyncing: Boolean = false,
     val overlayWidth: Int = Settings.DEFAULT_OVERLAY_WIDTH,
     val overlayContentHeight: Int =
         Settings.DEFAULT_OVERLAY_CONTENT_HEIGHT,

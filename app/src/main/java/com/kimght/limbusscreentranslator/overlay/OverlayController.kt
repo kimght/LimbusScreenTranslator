@@ -2,6 +2,7 @@ package com.kimght.limbusscreentranslator.overlay
 
 import com.kimght.limbusscreentranslator.data.datastore.Settings
 import com.kimght.limbusscreentranslator.data.datastore.SettingsRepository
+import com.kimght.limbusscreentranslator.data.repository.ChapterSyncCoordinator
 import com.kimght.limbusscreentranslator.data.repository.EpisodeUnavailableException
 import com.kimght.limbusscreentranslator.data.repository.LocalizationRepository
 import com.kimght.limbusscreentranslator.data.repository.OverlayStateRepository
@@ -32,6 +33,7 @@ class OverlayController(
     private val localizations: LocalizationRepository,
     private val scenarios: ScenarioRepository,
     private val overlayState: OverlayStateRepository,
+    private val chapterSync: ChapterSyncCoordinator,
     private val scope: CoroutineScope,
 ) {
     private val mode = MutableStateFlow(OverlayMode.DIALOGUE)
@@ -51,14 +53,14 @@ class OverlayController(
 
     private val content: Flow<Content?> = activePack.flatMapLatest { pack ->
         if (pack == null) return@flatMapLatest flowOf(null)
-        val chapters = scenarios.chapters(pack.sourceName)
+        val chapters = scenarios.observeChapters(pack.sourceName)
         val reading = overlayState.readingState(pack.key)
         val lines = reading
             .map { it.currentEpisode }
             .distinctUntilChanged()
             .map { episode -> loadLines(pack.key, episode) }
-        combine(reading, lines) { state, load ->
-            Content(pack, chapters, state, load.lines, load.unavailable)
+        combine(chapters, reading, lines) { chapterList, state, load ->
+            Content(pack, chapterList, state, load.lines, load.unavailable)
         }
     }
 
@@ -79,7 +81,8 @@ class OverlayController(
         local,
         content,
         isPortrait,
-    ) { prefs, local, content, portrait ->
+        chapterSync.syncing,
+    ) { prefs, local, content, portrait, syncingSources ->
         val width = local.draft?.width ?: prefs.overlayWidth
         val contentHeight = local.draft?.contentHeight ?: prefs.overlayContentHeight
         if (content == null) {
@@ -126,6 +129,7 @@ class OverlayController(
                 nextEpisode = model.nav.next,
                 totalEpisodes = model.totalEpisodes,
                 chapterSourceName = model.sourceName,
+                chapterSyncing = content.pack.sourceName in syncingSources,
             )
         }
     }.stateIn(scope, SharingStarted.Eagerly, OverlayUiState())
@@ -264,6 +268,13 @@ class OverlayController(
 
     fun setMinimizedPositionFromService(x: Int, y: Int) {
         scope.launch { settings.setMinimizedPosition(x, y) }
+    }
+
+    fun retryChapterSync() {
+        scope.launch {
+            val pack = activePack.first() ?: return@launch
+            chapterSync.syncFromSource(pack.sourceName, force = true)
+        }
     }
 
     private suspend fun activeId(): String? = settings.settings.first().activeLocalizationId

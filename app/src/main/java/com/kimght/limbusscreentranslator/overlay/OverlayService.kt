@@ -29,6 +29,7 @@ import com.kimght.limbusscreentranslator.core.i18n.ProvideUiLanguage
 import com.kimght.limbusscreentranslator.core.i18n.localizedTo
 import com.kimght.limbusscreentranslator.data.datastore.Settings as AppSettings
 import com.kimght.limbusscreentranslator.data.datastore.SettingsRepository
+import com.kimght.limbusscreentranslator.data.repository.ChapterSyncCoordinator
 import com.kimght.limbusscreentranslator.data.repository.LocalizationRepository
 import com.kimght.limbusscreentranslator.data.repository.OverlayStateRepository
 import com.kimght.limbusscreentranslator.data.repository.ScenarioRepository
@@ -61,6 +62,8 @@ class OverlayService : Service() {
     @Inject
     lateinit var overlayState: OverlayStateRepository
     @Inject
+    lateinit var chapterSync: ChapterSyncCoordinator
+    @Inject
     lateinit var runningState: OverlayRunningState
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -86,7 +89,7 @@ class OverlayService : Service() {
         }
 
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        val controller = OverlayController(settings, localizations, scenarios, overlayState, scope)
+        val controller = OverlayController(settings, localizations, scenarios, overlayState, chapterSync, scope)
         controllerRef = controller
         controller.setOrientation(isPortrait())
         addOverlayView(controller)
@@ -152,6 +155,7 @@ class OverlayService : Service() {
             onLineSettled = controller::setLineIndex,
             onDrag = ::onDragBy,
             onDragEnd = ::onDragEnd,
+            onRetryChapters = controller::retryChapterSync,
         )
 
         val view = ComposeView(this).apply {

@@ -11,6 +11,7 @@ import com.kimght.limbusscreentranslator.data.install.RoomPackContentWriter
 import com.kimght.limbusscreentranslator.data.network.LocalizationApi
 import com.kimght.limbusscreentranslator.domain.model.DialogueLine
 import com.kimght.limbusscreentranslator.domain.model.InstalledPack
+import app.cash.turbine.test
 import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
@@ -18,6 +19,7 @@ import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -103,6 +105,28 @@ class ScenarioRepositoryTest {
         assertEquals(1, chapters.size)
         assertEquals("Canto I", chapters[0].name)
         assertEquals(listOf("S001B"), chapters[0].episodes.map { it.code })
+    }
+
+    @Test
+    fun `observeChapters emits the updated list when a refresh lands`() = runTest {
+        repo.observeChapters("Github").test {
+            assertTrue(awaitItem().isEmpty())
+
+            server.enqueue(
+                MockResponse().setBody(
+                    """{"chapters":[{"name":"Canto I","subtitle":"s","episodes":["S001B"]}]}""",
+                ),
+            )
+            repo.refreshChapters("Github", server.url("/chapters.json").toString())
+
+            var updated = awaitItem()
+            while (updated.none { it.name == "Canto I" && it.episodes.isNotEmpty() }) {
+                updated = awaitItem()
+            }
+            assertEquals(listOf("Canto I"), updated.map { it.name })
+            assertEquals(listOf("S001B"), updated.single().episodes.map { it.code })
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
     @Test
