@@ -32,7 +32,7 @@ data class Settings(
         const val MAX_OVERLAY_WIDTH = 560
         const val DEFAULT_OVERLAY_WIDTH = 360
 
-        const val MIN_OVERLAY_CONTENT_HEIGHT = 110
+        const val MIN_OVERLAY_CONTENT_HEIGHT = 80
         const val MAX_OVERLAY_CONTENT_HEIGHT = 300
         const val DEFAULT_OVERLAY_CONTENT_HEIGHT = 150
     }

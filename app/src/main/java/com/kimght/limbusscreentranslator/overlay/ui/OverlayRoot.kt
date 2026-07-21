@@ -580,7 +580,7 @@ private fun EpisodeButton(
 private fun Rail(state: OverlayUiState, actions: OverlayActions, modifier: Modifier) {
     Column(
         modifier
-            .width(50.dp)
+            .width(40.dp)
             .background(InsetBg)
             .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -608,7 +608,7 @@ private fun SectionButton(
         if (active) {
             Box(
                 Modifier
-                    .size(34.dp)
+                    .size(28.dp)
                     .background(
                         Brush.radialGradient(
                             listOf(Limbus300.copy(alpha = 0.25f), Color.Transparent),
@@ -619,7 +619,7 @@ private fun SectionButton(
         Icon(
             icon,
             null,
-            Modifier.size(20.dp),
+            Modifier.size(18.dp),
             tint = if (active) Limbus300 else Limbus500,
         )
     }
@@ -632,7 +632,7 @@ private fun RailButton(
     content: @Composable BoxScope.() -> Unit,
 ) {
     val base = Modifier
-        .size(width = 40.dp, height = 38.dp)
+        .size(width = 40.dp, height = 30.dp)
         .clip(RoundedCornerShape(3.dp))
     val decorated = if (danger) {
         base
