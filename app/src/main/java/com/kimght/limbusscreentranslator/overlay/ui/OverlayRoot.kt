@@ -374,13 +374,15 @@ private fun ChapterContent(
                         stringResource(R.string.overlay_prev),
                         state.prevEpisode,
                         actions.onSelectEpisode,
-                        Modifier.weight(1f)
+                        destinationFirst = false,
+                        modifier = Modifier.weight(1f),
                     )
                     NavButton(
                         stringResource(R.string.overlay_next),
                         state.nextEpisode,
                         actions.onSelectEpisode,
-                        Modifier.weight(1f)
+                        destinationFirst = true,
+                        modifier = Modifier.weight(1f),
                     )
                 }
             }
@@ -391,15 +393,28 @@ private fun ChapterContent(
     }
 }
 
+internal enum class NavButtonPart {
+    LABEL,
+    DESTINATION,
+}
+
+internal fun navButtonParts(destinationFirst: Boolean): List<NavButtonPart> =
+    if (destinationFirst) {
+        listOf(NavButtonPart.DESTINATION, NavButtonPart.LABEL)
+    } else {
+        listOf(NavButtonPart.LABEL, NavButtonPart.DESTINATION)
+    }
+
 @Composable
 private fun NavButton(
     label: String,
     shortcut: EpisodeShortcut?,
     onClick: (String) -> Unit,
+    destinationFirst: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val enabled = shortcut != null
-    Column(
+    Row(
         modifier
             .clip(RoundedCornerShape(2.dp))
             .background(if (enabled) Limbus300.copy(alpha = 0.07f) else Color(0x18000000))
@@ -409,25 +424,34 @@ private fun NavButton(
                 RoundedCornerShape(2.dp),
             )
             .then(if (shortcut != null) Modifier.clickable { onClick(shortcut.code) } else Modifier)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(
-            label,
-            color = if (enabled) Limbus300 else Limbus600,
-            fontSize = 10.sp,
-            letterSpacing = 1.4.sp,
-            fontWeight = FontWeight.Medium,
-        )
-        Text(
-            shortcut?.let {
-                "${it.meta} · ${stringResource(R.string.overlay_episode_short, it.episodeNumber)}"
-            } ?: "—",
-            color = if (enabled) Limbus200 else Limbus600,
-            fontSize = 11.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        navButtonParts(destinationFirst).forEach { part ->
+            when (part) {
+                NavButtonPart.LABEL -> Text(
+                    text = label,
+                    color = if (enabled) Limbus300 else Limbus600,
+                    fontSize = 10.sp,
+                    letterSpacing = 1.4.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                )
+
+                NavButtonPart.DESTINATION -> Text(
+                    text = shortcut?.let {
+                        "${it.meta} · ${stringResource(R.string.overlay_episode_short, it.episodeNumber)}"
+                    } ?: "—",
+                    color = if (enabled) Limbus200 else Limbus600,
+                    fontSize = 11.sp,
+                    textAlign = if (destinationFirst) TextAlign.Start else TextAlign.End,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
     }
 }
 

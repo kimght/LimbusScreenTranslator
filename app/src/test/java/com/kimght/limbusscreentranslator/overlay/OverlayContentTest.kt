@@ -2,6 +2,8 @@ package com.kimght.limbusscreentranslator.overlay
 
 import com.kimght.limbusscreentranslator.domain.model.Chapter
 import com.kimght.limbusscreentranslator.domain.model.Episode
+import com.kimght.limbusscreentranslator.overlay.ui.NavButtonPart
+import com.kimght.limbusscreentranslator.overlay.ui.navButtonParts
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -97,6 +99,18 @@ class OverlayContentTest {
 
         assertNull(nav.prev)
         assertNull(nav.next)
+    }
+
+    @Test
+    fun `quick navigation mirrors labels around destination text`() {
+        assertEquals(
+            listOf(NavButtonPart.LABEL, NavButtonPart.DESTINATION),
+            navButtonParts(destinationFirst = false),
+        )
+        assertEquals(
+            listOf(NavButtonPart.DESTINATION, NavButtonPart.LABEL),
+            navButtonParts(destinationFirst = true),
+        )
     }
 
     @Test
