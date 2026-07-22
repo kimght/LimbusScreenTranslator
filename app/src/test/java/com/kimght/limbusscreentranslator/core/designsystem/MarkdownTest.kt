@@ -39,6 +39,19 @@ class MarkdownTest {
     }
 
     @Test
+    fun `four hashes create a heading-four block`() {
+        assertEquals(listOf(MarkdownBlock.H4("Fine detail")), parseMarkdown("#### Fine detail"))
+    }
+
+    @Test
+    fun `five hashes remain paragraph text`() {
+        assertEquals(
+            listOf(MarkdownBlock.Paragraph("##### Too deep")),
+            parseMarkdown("##### Too deep"),
+        )
+    }
+
+    @Test
     fun `a line of three dashes is a horizontal rule`() {
         assertEquals(listOf(MarkdownBlock.Rule), parseMarkdown("---"))
     }
@@ -85,5 +98,106 @@ class MarkdownTest {
     @Test
     fun `an unmatched star is kept as a literal`() {
         assertEquals(listOf(InlineSpan("2 * 3 = 6")), parseInline("2 * 3 = 6"))
+    }
+
+    @Test
+    fun `single underscore wraps an italic span`() {
+        assertEquals(
+            listOf(InlineSpan("soft", italic = true)),
+            parseInline("_soft_"),
+        )
+    }
+
+    @Test
+    fun `double underscore wraps a bold span`() {
+        assertEquals(
+            listOf(InlineSpan("strong", bold = true)),
+            parseInline("__strong__"),
+        )
+    }
+
+    @Test
+    fun `unmatched underscore is kept as a literal`() {
+        assertEquals(listOf(InlineSpan("file_name")), parseInline("file_name"))
+    }
+
+    @Test
+    fun `italic underscore can nest inside bold underscores`() {
+        assertEquals(
+            listOf(
+                InlineSpan("bold and ", bold = true),
+                InlineSpan("italic", bold = true, italic = true),
+                InlineSpan(" text", bold = true),
+            ),
+            parseInline("__bold and _italic_ text__"),
+        )
+    }
+
+    @Test
+    fun `underscore italic can nest inside asterisk bold`() {
+        assertEquals(
+            listOf(
+                InlineSpan("bold ", bold = true),
+                InlineSpan("italic", bold = true, italic = true),
+            ),
+            parseInline("**bold _italic_**"),
+        )
+    }
+
+    @Test
+    fun `asterisk bold can nest inside asterisk italic`() {
+        assertEquals(
+            listOf(
+                InlineSpan("italic ", italic = true),
+                InlineSpan("bold", bold = true, italic = true),
+                InlineSpan(" text", italic = true),
+            ),
+            parseInline("*italic **bold** text*"),
+        )
+    }
+
+    @Test
+    fun `underscore bold can nest inside underscore italic`() {
+        assertEquals(
+            listOf(
+                InlineSpan("italic ", italic = true),
+                InlineSpan("bold", bold = true, italic = true),
+                InlineSpan(" text", italic = true),
+            ),
+            parseInline("_italic __bold__ text_"),
+        )
+    }
+
+    @Test
+    fun `unmatched single opener stays literal before double emphasis`() {
+        assertEquals(
+            listOf(
+                InlineSpan("*literal "),
+                InlineSpan("bold", bold = true),
+            ),
+            parseInline("*literal **bold**"),
+        )
+    }
+
+    @Test
+    fun `unmatched double asterisk stays literal before single emphasis`() {
+        assertEquals(
+            listOf(
+                InlineSpan("**literal "),
+                InlineSpan("italic", italic = true),
+            ),
+            parseInline("**literal *italic*"),
+        )
+    }
+
+    @Test
+    fun `unmatched double underscore stays literal before single emphasis`() {
+        assertEquals(
+            listOf(
+                InlineSpan("__literal "),
+                InlineSpan("italic", italic = true),
+            ),
+            parseInline("__literal _italic_"),
+        )
     }
 }
