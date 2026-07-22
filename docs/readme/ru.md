@@ -11,11 +11,11 @@
 
 Плавающее окно для чтения перевода истории не выходя из игры.
 
-[![Последний релиз](https://img.shields.io/github/v/release/kimght/LimbusScreenTranslator?style=flat-square&label=%D0%9F%D0%BE%D1%81%D0%BB%D0%B5%D0%B4%D0%BD%D0%B8%D0%B9&labelColor=%23352b24&color=%23c88719)](../../../releases/latest)
-[![Всего загрузок](https://img.shields.io/github/downloads/kimght/LimbusScreenTranslator/total?style=flat-square&label=%D0%97%D0%B0%D0%B3%D1%80%D1%83%D0%B7%D0%BA%D0%B8&labelColor=%23352b24&color=%23c88719)](../../../releases)
+[![Последний релиз](https://img.shields.io/github/v/release/kimght/LimbusScreenTranslator?style=flat-square&label=%D0%9F%D0%BE%D1%81%D0%BB%D0%B5%D0%B4%D0%BD%D0%B8%D0%B9&labelColor=%23352b24&color=%23c88719)](https://github.com/kimght/LimbusScreenTranslator/releases/latest)
+[![Всего загрузок](https://img.shields.io/github/downloads/kimght/LimbusScreenTranslator/total?style=flat-square&label=%D0%97%D0%B0%D0%B3%D1%80%D1%83%D0%B7%D0%BA%D0%B8&labelColor=%23352b24&color=%23c88719)](https://github.com/kimght/LimbusScreenTranslator/releases)
 [![Android 9+](https://img.shields.io/badge/Android-9%2B-c88719?style=flat-square&labelColor=%23352b24)](#установка)
 
-**[Скачать последнюю версию APK](../../../releases/latest)** · [Установка](#установка) · [Использование](#использование)
+**[Скачать последнюю версию APK](https://github.com/kimght/LimbusScreenTranslator/releases/latest)** · [Установка](#установка) · [Использование](#использование)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 Limbus Screen Translator требует **Android 9 или новее**.
 
-1. Скачайте APK из [последнего релиза](../../../releases/latest).
+1. Скачайте APK из [последнего релиза](https://github.com/kimght/LimbusScreenTranslator/releases/latest).
 2. Откройте загруженный файл и, если андроид попросит, разрешите установку из этого источника.
 3. Установите и откройте **Limbus Screen Translator**.
 
